@@ -1,7 +1,0 @@
-(mod test_new_syntax
-  (fn main () -> i32
-    (set x i32 10)
-    (set y i32 20)
-    (set sum i32 (call add x y))
-    (call io_print_i32 sum)
-    (ret 0)))

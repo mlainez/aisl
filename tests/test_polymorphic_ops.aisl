@@ -1,0 +1,35 @@
+(mod polymorphic_ops
+  (fn add_i32 ((x i32) (y i32)) -> i32
+    (ret (call add x y)))
+  
+  (test-spec add_i32
+    (case "polymorphic add with i32"
+      (input 10 20)
+      (expect 30)))
+  
+  (fn add_f64 ((a f64) (b f64)) -> f64
+    (ret (call add a b)))
+  
+  (test-spec add_f64
+    (case "polymorphic add with f64"
+      (input 3.14 2.86)
+      (expect 6.0)))
+  
+  (fn sub_i32 ((x i32) (y i32)) -> i32
+    (ret (call sub x y)))
+  
+  (test-spec sub_i32
+    (case "polymorphic sub with i32"
+      (input 20 10)
+      (expect 10)))
+  
+  (fn mul_f64 ((a f64) (b f64)) -> f64
+    (ret (call mul a b)))
+  
+  (test-spec mul_f64
+    (case "polymorphic mul with f64"
+      (input 3.14 2.86)
+      (expect 8.9804)))
+  
+  (meta-note "Tests that polymorphic operations work correctly with different types
+              Same operation name (add, sub, mul) resolves to different typed operations"))
