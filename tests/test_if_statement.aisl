@@ -1,0 +1,16 @@
+(mod test_if_stmt
+  (fn test_if () -> i32
+    (call print "Starting test")
+    (set x i32 10)
+    (call print "Set x to 10")
+    (if (call op_gt_i32 x 5)
+      (then
+        (call print "x is greater than 5"))
+      (else
+        (call print "x is 5 or less")))
+    (call print "Done with if")
+    (ret x))
+
+  (fn main () -> i32
+    (call test_if)
+    (ret 0)))

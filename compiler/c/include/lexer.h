@@ -63,6 +63,7 @@ typedef enum {
     TOK_WHILE,
     TOK_DO,
     TOK_FOR,
+    TOK_LOOP,
 
     // V3 Keywords
     TOK_MOD,

@@ -1,0 +1,11 @@
+(mod test_goto_loop
+  (fn count_to_five () -> i32
+    (set n i32 0)
+    (while (call op_lt_i32 n 5)
+      (set n i32 (call op_add_i32 n 1)))
+    (ret n))
+
+  (fn main () -> i32
+    (set result i32 (call count_to_five))
+    (call print "Loop complete")
+    (ret 0)))

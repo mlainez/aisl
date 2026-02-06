@@ -570,6 +570,58 @@ static Expr* parser_parse_statements_v3(Parser* parser) {
             }
             break; // ret is terminal
 
+        } else if (next.kind == TOK_WHILE) {
+            // (while condition body-statements)
+            parser_advance(parser); // (
+            parser_advance(parser); // while
+            
+            // Parse condition
+            Expr* cond = parser_parse_value_expr_v3(parser);
+            
+            // Parse body statements recursively
+            Expr* body = parser_parse_statements_v3(parser);
+            
+            parser_expect(parser, TOK_RPAREN);
+            
+            // Create EXPR_WHILE node
+            Expr* while_expr = expr_while(cond, body, type_unit());
+            
+            ExprList* stmt = malloc(sizeof(ExprList));
+            stmt->expr = while_expr;
+            stmt->next = NULL;
+            if (stmts) {
+                ExprList* cur = stmts;
+                while (cur->next) cur = cur->next;
+                cur->next = stmt;
+            } else {
+                stmts = stmt;
+            }
+
+        } else if (next.kind == TOK_LOOP) {
+            // (loop body-statements) -> syntactic sugar for (while true body-statements)
+            parser_advance(parser); // (
+            parser_advance(parser); // loop
+            
+            // Parse body statements recursively
+            Expr* body = parser_parse_statements_v3(parser);
+            
+            parser_expect(parser, TOK_RPAREN);
+            
+            // Create EXPR_WHILE node with true condition
+            Expr* true_cond = expr_lit_bool(true);
+            Expr* loop_expr = expr_while(true_cond, body, type_unit());
+            
+            ExprList* stmt = malloc(sizeof(ExprList));
+            stmt->expr = loop_expr;
+            stmt->next = NULL;
+            if (stmts) {
+                ExprList* cur = stmts;
+                while (cur->next) cur = cur->next;
+                cur->next = stmt;
+            } else {
+                stmts = stmt;
+            }
+
         } else {
             // Unknown statement, skip to closing paren
             int depth = 1;

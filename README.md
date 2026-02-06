@@ -43,7 +43,7 @@ A programming language designed for AI code generation with explicit syntax, zer
 ## Language Features
 
 - **Types**: i32, i64, f32, f64, bool, string
-- **Control Flow**: Labels and goto (no while/for/if keywords)
+- **Control Flow**: Structured loops (`while`, `loop`) and labels/goto
 - **Functions**: First-class with recursion support
 - **Standard Library**: String ops, file I/O, TCP/HTTP, JSON, regex, crypto
 - **No Operator Precedence**: All operations are explicit function calls
@@ -54,6 +54,25 @@ A programming language designed for AI code generation with explicit syntax, zer
 - **[examples/](examples/)** - Example programs including a web server
 
 ## Examples
+
+### Control Flow
+
+```scheme
+; While loop - iterate while condition is true
+(fn countdown ((n i32)) -> i32
+  (while (call op_gt_i32 n 0)
+    (call print_i32 n)
+    (set n i32 (call op_sub_i32 n 1)))
+  (ret 0))
+
+; Infinite loop - for servers and event loops
+(fn start_server ((port i32)) -> i32
+  (set server_sock string (call tcp_listen port))
+  (loop
+    (set client_sock string (call tcp_accept server_sock))
+    (call handle_connection client_sock))
+  (ret 0))
+```
 
 ### Factorial (Recursion)
 
@@ -89,15 +108,11 @@ A programming language designed for AI code generation with explicit syntax, zer
     (call tcp_close client_sock)
     (ret 0))
 
-  (fn accept_loop ((server_sock string)) -> i32
-    (set client_sock string (call tcp_accept server_sock))
-    (call handle_connection client_sock)
-    (call accept_loop server_sock)
-    (ret 0))
-
   (fn main () -> i32
     (set server_sock string (call tcp_listen 8080))
-    (call accept_loop server_sock)
+    (loop
+      (set client_sock string (call tcp_accept server_sock))
+      (call handle_connection client_sock))
     (ret 0)))
 ```
 
@@ -137,7 +152,7 @@ This builds:
 
 1. **Explicit Types** - Every variable has a declared type
 2. **Flat Structure** - No complex nested expressions
-3. **Label-based Control** - Use labels and goto instead of while/for
+3. **Structured Control** - Use `while`/`loop` for iteration; labels/goto for complex flow
 4. **Function Calls** - All operations use explicit `call` syntax
 5. **No Operator Precedence** - No infix operators
 6. **Deterministic** - Same input always produces same output

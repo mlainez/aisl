@@ -18,6 +18,8 @@ statement ::= (set <var> <type> <expr>)
             | (label <name>)
             | (goto <label>)
             | (ifnot <bool_var> <label>)
+            | (while <bool_expr> <statement>*)
+            | (loop <statement>*)
             | (ret <expr>)
             | (ret <value>)
 
@@ -60,10 +62,41 @@ Variables must be explicitly typed:
 
 ## Control Flow
 
-AISL uses **labels and goto** for control flow. Use `ifnot` to conditionally jump.
+AISL supports both **structured loops** (`while` and `loop`) and **labels with goto** for control flow.
+
+### Structured Loops (Recommended)
+
+**While Loop**: `(while <condition> <statements>...)`
+
+Executes the body statements repeatedly while the condition is true.
 
 ```scheme
 (fn countdown ((n i32)) -> i32
+  (while (call op_gt_i32 n 0)
+    (call print_i32 n)
+    (set n i32 (call op_sub_i32 n 1)))
+  (ret 0))
+```
+
+**Infinite Loop**: `(loop <statements>...)`
+
+Executes the body statements forever. Use this for server accept loops or event loops.
+
+```scheme
+(fn start_server ((port i32)) -> i32
+  (set server_sock string (call tcp_listen port))
+  (loop
+    (set client_sock string (call tcp_accept server_sock))
+    (call handle_connection client_sock))
+  (ret 0))
+```
+
+### Label-based Control Flow
+
+For more complex control flow, AISL supports **labels and goto**. Use `ifnot` to conditionally jump.
+
+```scheme
+(fn countdown_with_labels ((n i32)) -> i32
   (label loop)
   (set done bool (call op_le_i32 n 0))
   (ifnot done continue)
@@ -87,15 +120,20 @@ Use `if_<type>` builtin functions for conditional values:
 
 ### Recursion
 
-Functions can call themselves for loops:
+Functions can call themselves for recursive algorithms:
 
 ```scheme
-(fn accept_loop ((server_sock string)) -> i32
-  (set client_sock string (call tcp_accept server_sock))
-  (call handle_connection client_sock)
-  (call accept_loop server_sock)  ; Recursive call
-  (ret 0))
+(fn factorial ((n i32)) -> i32
+  (set is_base bool (call op_le_i32 n 1))
+  (ifnot is_base recurse)
+  (ret 1)
+  (label recurse)
+  (set n_minus_1 i32 (call op_sub_i32 n 1))
+  (set result i32 (call factorial n_minus_1))
+  (ret (call op_mul_i32 n result)))
 ```
+
+**Note**: For simple iteration, prefer `while` or `loop` over recursion for better performance.
 
 ## Standard Library
 
@@ -315,16 +353,12 @@ AISL provides 180+ built-in functions. All functions use explicit `call` syntax.
     (call tcp_close client_sock)
     (ret 0))
 
-  (fn accept_loop ((server_sock string)) -> i32
-    (set client_sock string (call tcp_accept server_sock))
-    (call handle_connection client_sock)
-    (call accept_loop server_sock)
-    (ret 0))
-
   (fn start_server ((port i32)) -> i32
     (call print "Server running on http://localhost:8080")
     (set server_sock string (call tcp_listen port))
-    (call accept_loop server_sock)
+    (loop
+      (set client_sock string (call tcp_accept server_sock))
+      (call handle_connection client_sock))
     (ret 0))
 
   (fn main () -> i32
@@ -337,13 +371,13 @@ This server:
 - Routes `GET /hello` to HTML response (200 OK)
 - Routes `GET /hello.json` to JSON response (200 OK)
 - Returns 404 Not Found for all other paths
-- Uses recursive accept loop to handle multiple connections
+- Uses `loop` construct for the accept loop
 
 ## Key Design Principles
 
 1. **Explicit Types** - Every variable has a declared type
 2. **Flat Structure** - No complex nested expressions
-3. **Label-based Control** - Use labels and goto instead of while/for
+3. **Structured Control** - Use `while`/`loop` for iteration; labels/goto for complex flow
 4. **Function Calls** - All operations use explicit `call` syntax
 5. **No Operator Precedence** - No infix operators, everything is a function call
 6. **Deterministic** - Same input always produces same output

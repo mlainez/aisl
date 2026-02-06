@@ -30,10 +30,9 @@
     (call print "Starting echo server...")
     (set server_sock string (call tcp_listen port))
     (call print "Listening on port 8080")
-    (label accept_loop)
-    (set client_sock string (call tcp_accept server_sock))
-    (call handle_connection client_sock)
-    (goto accept_loop)
+    (loop
+      (set client_sock string (call tcp_accept server_sock))
+      (call handle_connection client_sock))
     (ret 0))
 
   (fn main () -> i32

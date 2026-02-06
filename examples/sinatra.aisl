@@ -13,12 +13,6 @@
     (call tcp_close client_sock)
     (ret 0))
 
-  (fn accept_loop ((server_sock string)) -> i32
-    (set client_sock string (call tcp_accept server_sock))
-    (call handle_connection client_sock)
-    (call accept_loop server_sock)
-    (ret 0))
-
   (fn start_server ((port i32)) -> i32
     (call print "==================================")
     (call print "  AISL Sinatra-style Web Server")
@@ -31,7 +25,9 @@
     (call print "  GET /hello.json   -> JSON response")
     (call print "")
     (set server_sock string (call tcp_listen port))
-    (call accept_loop server_sock)
+    (loop
+      (set client_sock string (call tcp_accept server_sock))
+      (call handle_connection client_sock))
     (ret 0))
 
   (fn main () -> i32
