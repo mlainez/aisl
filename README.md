@@ -1,6 +1,18 @@
 # AISL - AI-Optimized Systems Language
 
-A programming language designed for AI code generation with explicit syntax, zero ambiguity, and flat structure.
+A two-layer programming language designed for LLM code generation with explicit syntax, zero ambiguity, and a stable intermediate representation.
+
+## Architecture: Core + Agent
+
+AISL consists of two layers:
+
+- **AISL-Core** (IR Layer) - A minimal, frozen intermediate representation with only 6 statement types (`set`, `call`, `label`, `goto`, `ifnot`, `ret`). This is what the VM executes and will never change.
+
+- **AISL-Agent** (Surface Language) - An ergonomic surface language with structured control flow (`while`, `loop`, `break`, `continue`) that LLMs generate. The compiler desugars Agent code to Core IR.
+
+**LLMs write Agent code. The VM runs Core code.**
+
+This architecture prevents long-term entropy: the Core IR remains stable forever, while the Agent layer evolves to improve LLM ergonomics.
 
 ## Quick Start
 
@@ -25,27 +37,33 @@ A programming language designed for AI code generation with explicit syntax, zer
 
 ## Why AISL?
 
-### For AI Code Generators
+### For LLMs (AI Code Generators)
 
-1. **Zero Ambiguity** - Every construct has exactly one meaning
-2. **Explicit Everything** - Types and operations are always explicit
-3. **Flat Structure** - No complex nesting
-4. **Predictable** - Deterministic behavior
-5. **S-Expression Syntax** - Easy to parse and generate
+1. **Two-Layer Design** - Stable IR (Core) + Ergonomic surface (Agent)
+2. **Zero Ambiguity** - Every construct has exactly one meaning
+3. **Type-Directed Operations** - Write `add`, not `add_i32` (compiler infers types)
+4. **Explicit Error Handling** - Result type for fallible operations
+5. **Flat Structure** - No complex nesting, easy to generate
+6. **S-Expression Syntax** - Trivial to parse and generate
+7. **Predictable** - Deterministic behavior, same input → same output
 
 ### For Developers
 
-1. **Comprehensive** - Build web servers, APIs, command-line tools
+1. **Comprehensive** - Build web servers, APIs, CLIs, system tools
 2. **Fast** - Compiled to efficient bytecode
-3. **Safe** - Strong typing prevents errors
+3. **Safe** - Strong typing prevents runtime errors
 4. **Batteries Included** - 180+ built-in functions
+5. **Clear Semantics** - Explicit control flow, no hidden behavior
 
 ## Language Features
 
-- **Types**: i32, i64, f32, f64, bool, string
-- **Control Flow**: Structured loops (`while`, `loop`) and labels/goto
+- **Two-Layer Architecture**: Core IR (frozen) + Agent surface language
+- **Types**: i32, i64, f32, f64, bool, string, result
+- **Control Flow**: Structured loops (`while`, `loop`, `break`, `continue`) desugar to labels/goto
+- **Error Handling**: Result type with `is_ok`, `unwrap`, `unwrap_or` operations
+- **Type-Directed Operations**: Write `add`, compiler infers `add_i32` vs `add_f64`
 - **Functions**: First-class with recursion support
-- **Standard Library**: String ops, file I/O, TCP/HTTP, JSON, regex, crypto
+- **Standard Library**: String ops, file I/O, TCP/HTTP, JSON, regex, crypto (180+ functions)
 - **No Operator Precedence**: All operations are explicit function calls
 
 ## Documentation
@@ -176,13 +194,17 @@ This builds:
 
 ## Design Principles
 
-1. **Explicit Types** - Every variable has a declared type
-2. **Flat Structure** - No complex nested expressions
-3. **Structured Control** - Use `while`/`loop` for iteration; labels/goto for complex flow
-4. **Function Calls** - All operations use explicit `call` syntax
-5. **No Operator Precedence** - No infix operators
-6. **Deterministic** - Same input always produces same output
-7. **S-Expression Syntax** - Lisp-style parenthesized syntax
+1. **Two-Layer Architecture** - Frozen Core IR + evolving Agent surface language
+2. **Explicit Types** - Every variable has a declared type
+3. **Type-Directed Dispatch** - Operations infer types automatically (LLM-friendly)
+4. **Flat Structure** - No complex nested expressions
+5. **Structured Control** - `while`/`loop`/`break`/`continue` desugar to Core primitives
+6. **Explicit Error Handling** - Result type for operations that can fail
+7. **Function Calls** - All operations use explicit `call` syntax
+8. **No Operator Precedence** - No infix operators
+9. **Deterministic** - Same input always produces same output
+10. **S-Expression Syntax** - Lisp-style parenthesized syntax
+11. **LLM-First Design** - Optimized for code generation by AI
 
 ## Standard Library Highlights
 

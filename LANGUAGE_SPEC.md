@@ -1,8 +1,30 @@
 # AISL Language Specification
 
-AISL (AI-Optimized Systems Language) - A programming language designed for AI code generation with explicit syntax, zero ambiguity, and flat structure.
+AISL (AI-Optimized Systems Language) - A two-layer programming language designed for LLM code generation with explicit syntax, zero ambiguity, and stable IR.
 
-## Grammar
+## Architecture: Two Layers
+
+AISL consists of two distinct layers:
+
+### AISL-Core (IR Layer)
+The minimal, stable intermediate representation that the VM executes. This layer is **frozen** - it will never change. Core consists of only 6 statement types:
+- `set` - Variable binding
+- `call` - Function calls
+- `label` - Jump targets
+- `goto` - Unconditional jumps
+- `ifnot` - Conditional jumps
+- `ret` - Return from function
+
+### AISL-Agent (Surface Layer)
+The ergonomic surface language that LLMs generate. Agent code includes structured control flow (`while`, `loop`, `break`, `continue`) and type-directed operations (`add` instead of `add_i32`). The compiler desugars Agent code to Core IR before execution.
+
+**LLMs write Agent code. The VM runs Core code.**
+
+---
+
+## AISL-Agent Grammar (Surface Language)
+
+This is what you write and what LLMs generate.
 
 ### Program Structure
 
@@ -23,7 +45,6 @@ statement ::= (set <var> <type> <expr>)
             | (break)
             | (continue)
             | (ret <expr>)
-            | (ret <value>)
 
 expr ::= <literal>
        | <variable>
@@ -32,7 +53,7 @@ expr ::= <literal>
 literal ::= <number> | <string> | true | false
 ```
 
-### Example
+### Simple Example
 
 ```scheme
 (mod hello
@@ -40,6 +61,8 @@ literal ::= <number> | <string> | true | false
     (call print "Hello, World!")
     (ret 0)))
 ```
+
+---
 
 ## Types
 
@@ -50,6 +73,7 @@ literal ::= <number> | <string> | true | false
 - **f64** - 64-bit floating point
 - **bool** - Boolean (true/false)
 - **string** - UTF-8 string
+- **result** - Result type for error handling (ok or err)
 
 ### Type Annotations
 
@@ -62,27 +86,27 @@ Variables must be explicitly typed:
 (set price f64 19.99)
 ```
 
-## Control Flow
+---
 
-AISL supports both **structured loops** (`while` and `loop`) and **labels with goto** for control flow.
+## Control Flow (Agent Layer)
 
-### Structured Loops (Recommended)
+### Structured Loops
 
 **While Loop**: `(while <condition> <statements>...)`
 
-Executes the body statements repeatedly while the condition is true.
+Executes body while condition is true.
 
 ```scheme
 (fn countdown ((n i32)) -> i32
-  (while (call op_gt_i32 n 0)
+  (while (call gt n 0)
     (call print_i32 n)
-    (set n i32 (call op_sub_i32 n 1)))
+    (set n i32 (call sub n 1)))
   (ret 0))
 ```
 
 **Infinite Loop**: `(loop <statements>...)`
 
-Executes the body statements forever. Use this for server accept loops or event loops.
+Executes forever. Use for server loops.
 
 ```scheme
 (fn start_server ((port i32)) -> i32
@@ -95,128 +119,179 @@ Executes the body statements forever. Use this for server accept loops or event 
 
 ### Loop Control
 
-**Break**: `(break)`
-
-Exits the nearest enclosing loop immediately.
+**Break**: `(break)` - Exit nearest loop immediately
 
 ```scheme
 (fn find_value ((arr string) (target i32)) -> i32
   (set i i32 0)
   (loop
     (set val i32 (call array_get arr i))
-    (set found bool (call op_eq_i32 val target))
+    (set found bool (call eq val target))
     (ifnot found skip)
     (break)
     (label skip)
-    (set i i32 (call op_add_i32 i 1)))
+    (set i i32 (call add i 1)))
   (ret i))
 ```
 
-**Continue**: `(continue)`
-
-Skips to the next iteration of the nearest enclosing loop.
+**Continue**: `(continue)` - Skip to next iteration
 
 ```scheme
 (fn sum_positives ((arr string) (n i32)) -> i32
   (set i i32 0)
   (set sum i32 0)
-  (while (call op_lt_i32 i n)
+  (while (call lt i n)
     (set val i32 (call array_get arr i))
-    (set i i32 (call op_add_i32 i 1))
-    (set is_negative bool (call op_lt_i32 val 0))
+    (set i i32 (call add i 1))
+    (set is_negative bool (call lt val 0))
     (ifnot is_negative no_skip)
     (continue)
     (label no_skip)
-    (set sum i32 (call op_add_i32 sum val)))
+    (set sum i32 (call add sum val)))
   (ret sum))
 ```
 
-### Label-based Control Flow
+### Label-based Control Flow (Core Level)
 
-For more complex control flow, AISL supports **labels and goto**. Use `ifnot` to conditionally jump.
+For complex control flow, use labels and goto:
 
 ```scheme
 (fn countdown_with_labels ((n i32)) -> i32
   (label loop)
-  (set done bool (call op_le_i32 n 0))
+  (set done bool (call le n 0))
   (ifnot done continue)
   (ret 0)
   (label continue)
   (call print_i32 n)
-  (set n i32 (call op_sub_i32 n 1))
+  (set n i32 (call sub n 1))
   (goto loop))
 ```
 
 **Statement**: `(ifnot <bool_var> <label>)` - Jump to label if variable is false
 
-### Conditional Branching
+### Control Flow Rules
 
-Use `if_<type>` builtin functions for conditional values:
+**Agent Layer (enforced by compiler):**
+- `break`/`continue` only valid inside `while`/`loop`
+- Nested loops: `break`/`continue` affect innermost loop
+- Cannot goto into loop body from outside
 
-```scheme
-(set result string (call if_string condition "true_val" "false_val"))
-(set number i32 (call if_i32 condition 1 0))
-```
+**Core Layer (programmer responsibility):**
+- Labels are function-scoped
+- `goto` can jump to any label in same function
+- No restrictions on jump targets
 
 ### Recursion
 
-Functions can call themselves for recursive algorithms:
+Functions can call themselves:
 
 ```scheme
 (fn factorial ((n i32)) -> i32
-  (set is_base bool (call op_le_i32 n 1))
+  (set is_base bool (call le n 1))
   (ifnot is_base recurse)
   (ret 1)
   (label recurse)
-  (set n_minus_1 i32 (call op_sub_i32 n 1))
+  (set n_minus_1 i32 (call sub n 1))
   (set result i32 (call factorial n_minus_1))
-  (ret (call op_mul_i32 n result)))
+  (ret (call mul n result)))
 ```
 
-**Note**: For simple iteration, prefer `while` or `loop` over recursion for better performance.
+---
+
+## How Agent Code Desugars to Core
+
+### While Loop Desugaring
+
+```scheme
+; Agent code:
+(while (call lt count 10)
+  (call print count))
+
+; Desugars to Core:
+(label loop_start_1)
+(set _cond_1 bool (call lt count 10))
+(ifnot _cond_1 loop_end_1)
+(call print count)
+(goto loop_start_1)
+(label loop_end_1)
+```
+
+### Break Statement Desugaring
+
+```scheme
+; Agent code:
+(loop
+  (if (call eq count 10) (break))
+  (set count i32 (call add count 1)))
+
+; Desugars to Core:
+(label loop_start_2)
+(set _cond_2 bool (call eq count 10))
+(ifnot _cond_2 skip_break_2)
+(goto loop_end_2)
+(label skip_break_2)
+(set count i32 (call add count 1))
+(goto loop_start_2)
+(label loop_end_2)
+```
+
+---
 
 ## Standard Library
 
-AISL provides 180+ built-in functions. All functions use explicit `call` syntax.
+AISL provides 180+ built-in functions. All use explicit `call` syntax.
+
+### Type-Directed Operations
+
+The compiler infers types automatically. Write operation names without type suffixes:
+
+```scheme
+; Arithmetic (works for i32, i64, f32, f64)
+(call add a b)     ; Addition
+(call sub a b)     ; Subtraction
+(call mul a b)     ; Multiplication
+(call div a b)     ; Division
+(call mod a b)     ; Modulo (integers only)
+(call neg a)       ; Negation
+
+; Comparison (works for i32, i64, f32, f64)
+(call eq a b)      ; Equal
+(call ne a b)      ; Not equal
+(call lt a b)      ; Less than
+(call gt a b)      ; Greater than
+(call le a b)      ; Less or equal
+(call ge a b)      ; Greater or equal
+
+; Math (works for i32, i64, f32, f64)
+(call abs value)   ; Absolute value
+(call min a b)     ; Minimum
+(call max a b)     ; Maximum
+(call sqrt value)  ; Square root (f32, f64 only)
+(call pow base exp); Power (f32, f64 only)
+```
+
+The compiler automatically selects the correct operation based on variable types:
+```scheme
+(set x i32 10)
+(set y i32 20)
+(set sum i32 (call add x y))  ; Compiler uses add_i32
+
+(set a f64 3.14)
+(set b f64 2.71)
+(set result f64 (call mul a b))  ; Compiler uses mul_f64
+```
 
 ### String Operations
 
 ```scheme
-; String functions use 'string_' prefix
-(call string_length text)              ; Get length
+(call string_length text)              ; Get length -> i32
 (call string_contains haystack needle) ; Check contains -> bool
-(call string_concat a b)               ; Concatenate
-(call string_split text delimiter)     ; Split into array
-(call string_trim text)                ; Remove whitespace
-(call string_replace text old new)     ; Replace substring
-(call string_starts_with text prefix)  ; Check prefix
-(call string_ends_with text suffix)    ; Check suffix
-```
-
-### Arithmetic Operations
-
-```scheme
-; Operations use 'op_<operation>_<type>' pattern
-(call op_add_i32 a b)    ; a + b (i32)
-(call op_sub_i32 a b)    ; a - b (i32)
-(call op_mul_i32 a b)    ; a * b (i32)
-(call op_div_i32 a b)    ; a / b (i32)
-(call op_mod_i32 a b)    ; a % b (i32)
-
-; Also available: op_add_i64, op_add_f32, op_add_f64, etc.
-```
-
-### Comparison Operations
-
-```scheme
-(call op_eq_i32 a b)     ; a == b -> bool
-(call op_ne_i32 a b)     ; a != b -> bool
-(call op_lt_i32 a b)     ; a < b  -> bool
-(call op_gt_i32 a b)     ; a > b  -> bool
-(call op_le_i32 a b)     ; a <= b -> bool
-(call op_ge_i32 a b)     ; a >= b -> bool
-
-; Also available for i64, f32, f64
+(call string_concat a b)               ; Concatenate -> string
+(call string_split text delimiter)     ; Split -> array
+(call string_trim text)                ; Remove whitespace -> string
+(call string_replace text old new)     ; Replace -> string
+(call string_starts_with text prefix)  ; Check prefix -> bool
+(call string_ends_with text suffix)    ; Check suffix -> bool
 ```
 
 ### I/O Operations
@@ -233,7 +308,7 @@ AISL provides 180+ built-in functions. All functions use explicit `call` syntax.
 ### File Operations
 
 ```scheme
-(call file_read path)          ; Read file -> string
+(call file_read path)          ; Read file -> string (panics on error)
 (call file_write path content) ; Write file
 (call file_append path content); Append to file
 (call file_exists path)        ; Check exists -> bool
@@ -241,39 +316,72 @@ AISL provides 180+ built-in functions. All functions use explicit `call` syntax.
 (call file_size path)          ; Get size -> i64
 ```
 
+### Result Type for Error Handling
+
+Use `*_result` variants for operations that can fail:
+
+```scheme
+(call file_read_result path)  ; Returns result type
+(call is_ok result)            ; Check if ok -> bool
+(call is_err result)           ; Check if error -> bool
+(call unwrap result)           ; Extract value (panics on err)
+(call unwrap_or result default); Extract value or use default
+(call error_code result)       ; Get error code -> i32
+(call error_message result)    ; Get error message -> string
+```
+
+**Example: Error Handling Pattern**
+
+```scheme
+(fn safe_read_file ((path string)) -> i32
+  (set file_result result (call file_read_result path))
+  (set success bool (call is_ok file_result))
+  (ifnot success handle_error)
+  ; Success path
+  (set content string (call unwrap file_result))
+  (call print content)
+  (ret 0)
+  ; Error path
+  (label handle_error)
+  (set err_msg string (call error_message file_result))
+  (call print "Error reading file:")
+  (call print err_msg)
+  (ret 1))
+```
+
 ### TCP Networking
 
 ```scheme
-(call tcp_listen port)           ; Listen on port -> socket
-(call tcp_accept server_socket)  ; Accept connection -> socket
-(call tcp_connect host port)     ; Connect to server -> socket
-(call tcp_send socket data)      ; Send data -> i32
-(call tcp_receive socket bytes)  ; Receive data -> string
+(call tcp_listen port)           ; Listen -> socket
+(call tcp_accept server_socket)  ; Accept -> socket
+(call tcp_connect host port)     ; Connect -> socket
+(call tcp_send socket data)      ; Send -> i32
+(call tcp_receive socket bytes)  ; Receive -> string
 (call tcp_close socket)          ; Close socket
 ```
 
 ### HTTP Operations
 
 ```scheme
-(call http_get url)              ; GET request -> response
-(call http_post url body)        ; POST request -> response
-(call http_put url body)         ; PUT request -> response
-(call http_delete url)           ; DELETE request -> response
-(call http_get_status response)  ; Get status code -> i32
-(call http_get_body response)    ; Get body -> string
+(call http_get url)              ; GET -> response
+(call http_post url body)        ; POST -> response
+(call http_put url body)         ; PUT -> response
+(call http_delete url)           ; DELETE -> response
+(call http_get_status response)  ; Status code -> i32
+(call http_get_body response)    ; Body -> string
 ```
 
 ### JSON Operations
 
 ```scheme
-(call json_parse text)           ; Parse JSON string
-(call json_stringify obj)        ; Convert to JSON string
-(call json_new_object)           ; Create empty object
-(call json_new_array)            ; Create empty array
-(call json_get obj key)          ; Get value by key
-(call json_set obj key value)    ; Set key-value pair
+(call json_parse text)           ; Parse JSON
+(call json_stringify obj)        ; To JSON string
+(call json_new_object)           ; Empty object
+(call json_new_array)            ; Empty array
+(call json_get obj key)          ; Get value
+(call json_set obj key value)    ; Set value
 (call json_push array value)     ; Add to array
-(call json_length obj)           ; Get length/size
+(call json_length obj)           ; Length -> i32
 ```
 
 ### Array Operations
@@ -283,79 +391,34 @@ AISL provides 180+ built-in functions. All functions use explicit `call` syntax.
 (call array_push array value)    ; Add element
 (call array_get array index)     ; Get element
 (call array_set array index val) ; Set element
-(call array_length array)        ; Get length -> i32
+(call array_length array)        ; Length -> i32
 ```
 
 ### Map Operations
 
 ```scheme
-(call map_new)                   ; Create empty map
+(call map_new)                   ; Create map
 (call map_set map key value)     ; Set key-value
-(call map_get map key)           ; Get value by key
-(call map_has map key)           ; Check key exists -> bool
+(call map_get map key)           ; Get value
+(call map_has map key)           ; Check key -> bool
 (call map_delete map key)        ; Remove key
-(call map_length map)            ; Get size -> i32
-```
-
-### Process Operations
-
-```scheme
-(call process_spawn cmd args)    ; Start process
-(call process_wait proc)         ; Wait for completion
-(call process_kill proc signal)  ; Kill process
-(call process_read proc)         ; Read stdout
-(call process_write proc data)   ; Write to stdin
-```
-
-### Regular Expressions
-
-```scheme
-(call regex_compile pattern)     ; Compile regex
-(call regex_match regex text)    ; Test match -> bool
-(call regex_find regex text)     ; Find match -> string
-(call regex_find_all regex text) ; Find all -> array
-(call regex_replace regex text r); Replace matches
-```
-
-### Time Operations
-
-```scheme
-(call time_now)                  ; Current timestamp -> i64
-(call time_format timestamp fmt) ; Format time -> string
-(call time_parse text fmt)       ; Parse time -> i64
-```
-
-### Cryptography
-
-```scheme
-(call md5 text)                  ; MD5 hash -> string
-(call sha256 text)               ; SHA256 hash -> string
-(call hmac_sha256 key message)   ; HMAC-SHA256 -> string
-(call base64_encode data)        ; Encode base64 -> string
-(call base64_decode text)        ; Decode base64 -> string
+(call map_length map)            ; Size -> i32
 ```
 
 ### Type Conversions
 
 ```scheme
 (call cast_i32_i64 value)        ; i32 -> i64
-(call cast_i64_i32 value)        ; i64 -> i32
+(call cast_i64_i32 value)        ; i64 -> i32 (truncate)
 (call cast_i32_f32 value)        ; i32 -> f32
 (call cast_i32_f64 value)        ; i32 -> f64
-(call cast_f32_i32 value)        ; f32 -> i32
-(call cast_f64_i32 value)        ; f64 -> i32
-; And all other numeric conversions
-```
-
-### Math Functions
-
-```scheme
-(call math_abs_i32 value)        ; Absolute value
-(call math_min_i32 a b)          ; Minimum
-(call math_max_i32 a b)          ; Maximum
-(call math_sqrt value)           ; Square root
-(call math_pow base exp)         ; Power
-; Also available for i64, f32, f64
+(call cast_f32_i32 value)        ; f32 -> i32 (truncate)
+(call cast_f64_i32 value)        ; f64 -> i32 (truncate)
+(call string_from_i32 value)     ; i32 -> string
+(call string_from_i64 value)     ; i64 -> string
+(call string_from_f32 value)     ; f32 -> string
+(call string_from_f64 value)     ; f64 -> string
+(call string_from_bool value)    ; bool -> string
 ```
 
 ### Conditional Functions
@@ -371,9 +434,11 @@ AISL provides 180+ built-in functions. All functions use explicit `call` syntax.
 ### Garbage Collection
 
 ```scheme
-(call gc_collect)                ; Force GC collection
-(call gc_stats)                  ; Get GC statistics
+(call gc_collect)                ; Force collection
+(call gc_stats)                  ; GC statistics
 ```
+
+---
 
 ## Complete Example: Web Server
 
@@ -381,14 +446,17 @@ AISL provides 180+ built-in functions. All functions use explicit `call` syntax.
 (mod sinatra
   (fn handle_connection ((client_sock string)) -> i32
     (set request string (call tcp_receive client_sock 4096))
-    (set has_get_hello_json bool (call string_contains request "GET /hello.json "))
-    (set has_get_hello bool (call string_contains request "GET /hello "))
-    (set json_resp string "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 30\r\n\r\n{\"message\": \"Hello from AISL\"}")
-    (set html_resp string "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 41\r\n\r\n<html><body>Hello from AISL</body></html>")
-    (set notfound_resp string "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\nContent-Length: 9\r\n\r\nNot Found")
-    (set response string notfound_resp)
-    (set response string (call if_string has_get_hello html_resp response))
-    (set response string (call if_string has_get_hello_json json_resp response))
+    (set has_json bool (call string_contains request "GET /hello.json "))
+    (set has_html bool (call string_contains request "GET /hello "))
+    
+    (set json_resp string "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"status\":\"ok\"}")
+    (set html_resp string "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<h1>Hello</h1>")
+    (set not_found string "HTTP/1.1 404 Not Found\r\n\r\nNot Found")
+    
+    (set response string not_found)
+    (set response string (call if_string has_html html_resp response))
+    (set response string (call if_string has_json json_resp response))
+    
     (call tcp_send client_sock response)
     (call tcp_close client_sock)
     (ret 0))
@@ -406,34 +474,44 @@ AISL provides 180+ built-in functions. All functions use explicit `call` syntax.
     (ret 0)))
 ```
 
-This server:
-- Listens on port 8080
-- Routes `GET /hello` to HTML response (200 OK)
-- Routes `GET /hello.json` to JSON response (200 OK)
-- Returns 404 Not Found for all other paths
-- Uses `loop` construct for the accept loop
+This server demonstrates:
+- Structured loop (`loop`) for accept loop
+- Type-directed operations (no `_i32` suffixes needed for comparison)
+- String operations
+- TCP networking
+- Conditional routing with `if_string`
+
+---
 
 ## Key Design Principles
 
-1. **Explicit Types** - Every variable has a declared type
-2. **Flat Structure** - No complex nested expressions
-3. **Structured Control** - Use `while`/`loop` for iteration; labels/goto for complex flow
-4. **Function Calls** - All operations use explicit `call` syntax
-5. **No Operator Precedence** - No infix operators, everything is a function call
-6. **Deterministic** - Same input always produces same output
-7. **S-Expression Syntax** - Lisp-style parenthesized syntax
+1. **Two-Layer Architecture** - Core IR is frozen; Agent layer adds ergonomics
+2. **Explicit Types** - Every variable has declared type
+3. **Type-Directed Dispatch** - Compiler infers operation types automatically
+4. **Flat Structure** - No complex nested expressions
+5. **Structured Control** - `while`/`loop` desugar to labels/goto
+6. **Explicit Error Handling** - Result type for fallible operations
+7. **Function Calls** - All operations use explicit `call` syntax
+8. **No Operator Precedence** - Everything is a function call
+9. **S-Expression Syntax** - Lisp-style parenthesized syntax
+10. **LLM-First Design** - Optimized for code generation by AI
+
+---
 
 ## Compilation and Execution
 
 ```bash
-# Compile AISL source to bytecode
+# Compile AISL-Agent source to bytecode (via Core IR)
 ./compiler/c/bin/aislc program.aisl program.aislc
 
 # Run bytecode
 ./compiler/c/bin/aisl-run program.aislc
+
+# View desugared Core IR (for debugging)
+./compiler/c/bin/aislc --emit-core program.aisl
 ```
 
-## File Extension
+## File Extensions
 
-AISL source files use the `.aisl` extension.  
-Compiled bytecode files use the `.aislc` extension.
+- `.aisl` - AISL-Agent source files
+- `.aislc` - Compiled bytecode (Core IR)
