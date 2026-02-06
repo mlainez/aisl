@@ -526,6 +526,11 @@ static Expr* parser_parse_statements_v3(Parser* parser) {
             Expr* value = parser_parse_value_expr_v3(parser);
             parser_expect(parser, TOK_RPAREN);
 
+            // Attach the explicit type annotation to the value expression
+            // This ensures the compiler can track variable types
+            // Always use the explicit annotation (e.g., i32) instead of generic types (e.g., TYPE_INT)
+            value->type = var_type;
+
             // For now, just represent as an apply to a setter
             ExprList* args = malloc(sizeof(ExprList));
             args->expr = value;
@@ -534,7 +539,7 @@ static Expr* parser_parse_statements_v3(Parser* parser) {
             char set_func[256];
             snprintf(set_func, sizeof(set_func), "set_%s", var_name);
             Expr* func_expr = expr_var(set_func, type_unit());
-            Expr* set_expr = expr_apply(func_expr, args, type_unit());
+            Expr* set_expr = expr_apply(func_expr, args, var_type);
 
             ExprList* stmt = malloc(sizeof(ExprList));
             stmt->expr = set_expr;

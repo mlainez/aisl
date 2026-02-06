@@ -11,6 +11,7 @@
 typedef struct Local {
     char* name;
     uint32_t index;
+    TypeKind type;  // Track variable type for type-directed dispatch
     struct Local* next;
 } Local;
 
@@ -79,9 +80,10 @@ static bool compiler_find_function(Compiler* comp, const char* name, uint32_t* o
     return false;
 }
 
-static uint32_t compiler_add_local(Compiler* comp, const char* name) {
+static uint32_t compiler_add_local(Compiler* comp, const char* name, TypeKind type) {
     Local* local = malloc(sizeof(Local));
     local->name = strdup(name);
+    local->type = type;
     local->index = comp->local_count++;
     local->next = comp->locals;
     comp->locals = local;
@@ -91,16 +93,75 @@ static uint32_t compiler_add_local(Compiler* comp, const char* name) {
     return local->index;
 }
 
-static bool compiler_find_local(Compiler* comp, const char* name, uint32_t* out_index) {
+static bool compiler_find_local(Compiler* comp, const char* name, uint32_t* out_index, TypeKind* out_type) {
     Local* current = comp->locals;
     while (current) {
         if (strcmp(current->name, name) == 0) {
             *out_index = current->index;
+            if (out_type) {
+                *out_type = current->type;
+            }
             return true;
         }
         current = current->next;
     }
     return false;
+}
+
+// Helper to extract TypeKind from Type pointer
+static TypeKind type_to_typekind(Type* type) {
+    if (!type) return TYPE_UNIT;
+    return type->kind;
+}
+
+// Helper to get typed operation name from short name and type
+static const char* get_typed_operation(const char* short_name, TypeKind type) {
+    // Map short names to typed operation names
+    // For example: "add" + TYPE_I32 -> "op_add_i32"
+    
+    static char buffer[64];
+    const char* type_suffix = "";
+    
+    switch (type) {
+        case TYPE_I32: type_suffix = "_i32"; break;
+        case TYPE_I64: type_suffix = "_i64"; break;
+        case TYPE_F32: type_suffix = "_f32"; break;
+        case TYPE_F64: type_suffix = "_f64"; break;
+        default:
+            // Not a numeric type, return original name
+            return short_name;
+    }
+    
+    // Check if this is a polymorphic operation
+    if (strcmp(short_name, "add") == 0 ||
+        strcmp(short_name, "sub") == 0 ||
+        strcmp(short_name, "mul") == 0 ||
+        strcmp(short_name, "div") == 0 ||
+        strcmp(short_name, "mod") == 0 ||
+        strcmp(short_name, "neg") == 0) {
+        snprintf(buffer, sizeof(buffer), "op_%s%s", short_name, type_suffix);
+        return buffer;
+    }
+    
+    if (strcmp(short_name, "eq") == 0 ||
+        strcmp(short_name, "ne") == 0 ||
+        strcmp(short_name, "lt") == 0 ||
+        strcmp(short_name, "gt") == 0 ||
+        strcmp(short_name, "le") == 0 ||
+        strcmp(short_name, "ge") == 0) {
+        snprintf(buffer, sizeof(buffer), "op_%s%s", short_name, type_suffix);
+        return buffer;
+    }
+    
+    if (strcmp(short_name, "abs") == 0 ||
+        strcmp(short_name, "min") == 0 ||
+        strcmp(short_name, "max") == 0) {
+        snprintf(buffer, sizeof(buffer), "math_%s%s", short_name, type_suffix);
+        return buffer;
+    }
+    
+    // Not a polymorphic operation, return as-is
+    return short_name;
 }
 
 void compile_lit_int(Compiler* comp, Expr* expr) {
@@ -144,7 +205,7 @@ void compile_lit_unit(Compiler* comp) {
 
 void compile_var(Compiler* comp, Expr* expr) {
     uint32_t index = 0;
-    if (!compiler_find_local(comp, expr->data.var.name, &index)) {
+    if (!compiler_find_local(comp, expr->data.var.name, &index, NULL)) {
         fprintf(stderr, "Undefined local: %s\n", expr->data.var.name);
         exit(1);
     }
@@ -229,6 +290,46 @@ void compile_apply(Compiler* comp, Expr* expr) {
 
     const char* name = func->data.var.name;
 
+    // Type-directed dispatch for polymorphic operations
+    // Check if this is a short polymorphic operation (add, sub, mul, etc.)
+    if (strcmp(name, "add") == 0 || strcmp(name, "sub") == 0 || 
+        strcmp(name, "mul") == 0 || strcmp(name, "div") == 0 ||
+        strcmp(name, "mod") == 0 || strcmp(name, "neg") == 0 ||
+        strcmp(name, "eq") == 0 || strcmp(name, "ne") == 0 ||
+        strcmp(name, "lt") == 0 || strcmp(name, "gt") == 0 ||
+        strcmp(name, "le") == 0 || strcmp(name, "ge") == 0 ||
+        strcmp(name, "abs") == 0 || strcmp(name, "min") == 0 ||
+        strcmp(name, "max") == 0) {
+        
+        // Get type from first argument
+        if (!expr->data.apply.args) {
+            fprintf(stderr, "Operation '%s' requires at least one argument\n", name);
+            exit(1);
+        }
+        
+        // Check if first argument is a variable reference
+        Expr* first_arg = expr->data.apply.args->expr;
+        TypeKind arg_type = TYPE_UNIT;
+        
+        if (first_arg->kind == EXPR_VAR) {
+            // Look up variable type
+            uint32_t dummy_idx;
+            if (!compiler_find_local(comp, first_arg->data.var.name, &dummy_idx, &arg_type)) {
+                fprintf(stderr, "Undefined variable in operation: %s\n", first_arg->data.var.name);
+                exit(1);
+            }
+        } else if (first_arg->type) {
+            // Use type from expression
+            arg_type = type_to_typekind(first_arg->type);
+        }
+        
+        // Map to typed operation
+        const char* typed_name = get_typed_operation(name, arg_type);
+        
+        // Replace name with typed version and continue with normal compilation
+        name = typed_name;
+    }
+
     // V4.0 Variable declarations: (set varname value) becomes set_varname(value)
     if (strncmp(name, "set_", 4) == 0) {
         const char* var_name = name + 4;  // Skip "set_" prefix
@@ -240,11 +341,14 @@ void compile_apply(Compiler* comp, Expr* expr) {
         }
         compile_expr(comp, expr->data.apply.args->expr);
         
+        // Extract type from the value expression
+        TypeKind var_type = type_to_typekind(expr->data.apply.args->expr->type);
+        
         // Check if variable already exists
         uint32_t index = 0;
-        if (!compiler_find_local(comp, var_name, &index)) {
+        if (!compiler_find_local(comp, var_name, &index, NULL)) {
             // Variable doesn't exist, create it
-            index = compiler_add_local(comp, var_name);
+            index = compiler_add_local(comp, var_name, var_type);
         }
         
         // Emit STORE_LOCAL
@@ -2156,7 +2260,8 @@ void compile_let(Compiler* comp, Expr* expr) {
     BindingList* current = expr->data.let.bindings;
     while (current) {
         compile_expr(comp, current->binding->value);
-        uint32_t idx = compiler_add_local(comp, current->binding->name);
+        TypeKind binding_type = type_to_typekind(current->binding->type);
+        uint32_t idx = compiler_add_local(comp, current->binding->name, binding_type);
         Instruction store = {.opcode = OP_STORE_LOCAL, .operand.uint_val = idx};
         bytecode_emit(comp->program, store);
         current = current->next;
@@ -2352,7 +2457,8 @@ void compile_function(Compiler* comp, Definition* def) {
 
     ParamList* param = def->data.func.params;
     while (param) {
-        compiler_add_local(comp, param->param->name);
+        TypeKind param_type = type_to_typekind(param->param->type);
+        compiler_add_local(comp, param->param->name, param_type);
         param = param->next;
     }
 
