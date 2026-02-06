@@ -28,6 +28,18 @@ This directory contains practical examples demonstrating AISL's capabilities.
     - Multiple response types (HTML, JSON, 404)
     - Recursive accept loop pattern
 
+- **echo_server.aisl** - Simple TCP echo server
+- **simple_server.aisl** - Basic TCP server template
+- **simple_json_server.aisl** - JSON-based HTTP server
+- **sequential_server.aisl** - Sequential request handling server
+- **working_server.aisl** - Working HTTP server example
+- **final_server.aisl** - Complete server implementation
+- **test_server.aisl** - Server with test/debug output
+- **sinatra_simple.aisl** - Simplified Sinatra-style server
+- **sinatra_demo.aisl** - Sinatra server demonstration
+- **sinatra_debug.aisl** - Sinatra server with debug output
+- **sinatra_recursive.aisl** - Recursive request handling pattern
+
 ## Running Examples
 
 To compile and run an example:
