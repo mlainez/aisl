@@ -622,6 +622,50 @@ static Expr* parser_parse_statements_v3(Parser* parser) {
                 stmts = stmt;
             }
 
+        } else if (next.kind == TOK_BREAK) {
+            // (break)
+            parser_advance(parser); // (
+            parser_advance(parser); // break
+            parser_expect(parser, TOK_RPAREN);
+            
+            // Create EXPR_BREAK node
+            Expr* break_expr = malloc(sizeof(Expr));
+            break_expr->kind = EXPR_BREAK;
+            break_expr->type = type_unit();
+            
+            ExprList* stmt = malloc(sizeof(ExprList));
+            stmt->expr = break_expr;
+            stmt->next = NULL;
+            if (stmts) {
+                ExprList* cur = stmts;
+                while (cur->next) cur = cur->next;
+                cur->next = stmt;
+            } else {
+                stmts = stmt;
+            }
+
+        } else if (next.kind == TOK_CONTINUE) {
+            // (continue)
+            parser_advance(parser); // (
+            parser_advance(parser); // continue
+            parser_expect(parser, TOK_RPAREN);
+            
+            // Create EXPR_CONTINUE node
+            Expr* continue_expr = malloc(sizeof(Expr));
+            continue_expr->kind = EXPR_CONTINUE;
+            continue_expr->type = type_unit();
+            
+            ExprList* stmt = malloc(sizeof(ExprList));
+            stmt->expr = continue_expr;
+            stmt->next = NULL;
+            if (stmts) {
+                ExprList* cur = stmts;
+                while (cur->next) cur = cur->next;
+                cur->next = stmt;
+            } else {
+                stmts = stmt;
+            }
+
         } else {
             // Unknown statement, skip to closing paren
             int depth = 1;

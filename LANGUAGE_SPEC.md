@@ -20,6 +20,8 @@ statement ::= (set <var> <type> <expr>)
             | (ifnot <bool_var> <label>)
             | (while <bool_expr> <statement>*)
             | (loop <statement>*)
+            | (break)
+            | (continue)
             | (ret <expr>)
             | (ret <value>)
 
@@ -89,6 +91,44 @@ Executes the body statements forever. Use this for server accept loops or event 
     (set client_sock string (call tcp_accept server_sock))
     (call handle_connection client_sock))
   (ret 0))
+```
+
+### Loop Control
+
+**Break**: `(break)`
+
+Exits the nearest enclosing loop immediately.
+
+```scheme
+(fn find_value ((arr string) (target i32)) -> i32
+  (set i i32 0)
+  (loop
+    (set val i32 (call array_get arr i))
+    (set found bool (call op_eq_i32 val target))
+    (ifnot found skip)
+    (break)
+    (label skip)
+    (set i i32 (call op_add_i32 i 1)))
+  (ret i))
+```
+
+**Continue**: `(continue)`
+
+Skips to the next iteration of the nearest enclosing loop.
+
+```scheme
+(fn sum_positives ((arr string) (n i32)) -> i32
+  (set i i32 0)
+  (set sum i32 0)
+  (while (call op_lt_i32 i n)
+    (set val i32 (call array_get arr i))
+    (set i i32 (call op_add_i32 i 1))
+    (set is_negative bool (call op_lt_i32 val 0))
+    (ifnot is_negative no_skip)
+    (continue)
+    (label no_skip)
+    (set sum i32 (call op_add_i32 sum val)))
+  (ret sum))
 ```
 
 ### Label-based Control Flow

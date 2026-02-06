@@ -72,6 +72,32 @@ A programming language designed for AI code generation with explicit syntax, zer
     (set client_sock string (call tcp_accept server_sock))
     (call handle_connection client_sock))
   (ret 0))
+
+; Break - exit loop early
+(fn find_in_array ((arr string) (target i32) (n i32)) -> i32
+  (set i i32 0)
+  (while (call op_lt_i32 i n)
+    (set val i32 (call array_get arr i))
+    (set found bool (call op_eq_i32 val target))
+    (ifnot found skip)
+    (break)
+    (label skip)
+    (set i i32 (call op_add_i32 i 1)))
+  (ret i))
+
+; Continue - skip to next iteration
+(fn count_non_zero ((arr string) (n i32)) -> i32
+  (set i i32 0)
+  (set count i32 0)
+  (while (call op_lt_i32 i n)
+    (set val i32 (call array_get arr i))
+    (set i i32 (call op_add_i32 i 1))
+    (set is_zero bool (call op_eq_i32 val 0))
+    (ifnot is_zero no_skip)
+    (continue)
+    (label no_skip)
+    (set count i32 (call op_add_i32 count 1)))
+  (ret count))
 ```
 
 ### Factorial (Recursion)

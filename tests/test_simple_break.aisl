@@ -1,0 +1,15 @@
+(mod test_simple_break
+  (fn test_simple () -> i32
+    (set i i32 0)
+    (loop
+      (set i i32 (call op_add_i32 i 1))
+      (set done bool (call op_eq_i32 i 3))
+      (ifnot done skip)
+      (break)
+      (label skip))
+    (ret i))
+
+  (fn main () -> i32
+    (set result i32 (call test_simple))
+    (call print "Done")
+    (ret 0)))

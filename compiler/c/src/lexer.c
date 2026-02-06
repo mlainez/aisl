@@ -178,6 +178,8 @@ static Token read_identifier(Lexer* lexer) {
     else if (strcmp(str, "for") == 0) kind = TOK_FOR;
     else if (strcmp(str, "while") == 0) kind = TOK_WHILE;
     else if (strcmp(str, "loop") == 0) kind = TOK_LOOP;
+    else if (strcmp(str, "break") == 0) kind = TOK_BREAK;
+    else if (strcmp(str, "continue") == 0) kind = TOK_CONTINUE;
     else if (strcmp(str, "mod") == 0) kind = TOK_MOD;
     else if (strcmp(str, "defs") == 0) kind = TOK_DEFS;
     else if (strcmp(str, "fn") == 0) kind = TOK_FN;

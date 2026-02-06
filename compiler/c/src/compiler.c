@@ -21,6 +21,18 @@ typedef struct FunctionInfo {
     struct FunctionInfo* next;
 } FunctionInfo;
 
+typedef struct PendingJump {
+    uint32_t instruction_offset;
+    struct PendingJump* next;
+} PendingJump;
+
+typedef struct LoopContext {
+    uint32_t start_label;  // Label for continue (loop start)
+    uint32_t end_label;    // Label for break (loop end)
+    PendingJump* pending_breaks;  // List of break jumps to patch
+    struct LoopContext* parent;  // For nested loops
+} LoopContext;
+
 typedef struct {
     BytecodeProgram* program;
     uint32_t current_function;
@@ -28,6 +40,7 @@ typedef struct {
     uint32_t local_count;
     uint32_t max_local_count;
     FunctionInfo* functions;
+    LoopContext* loop_stack;  // Stack of enclosing loops
 } Compiler;
 
 void compile_expr(Compiler* comp, Expr* expr);
@@ -39,6 +52,7 @@ void compiler_init(Compiler* comp) {
     comp->local_count = 0;
     comp->max_local_count = 0;
     comp->functions = NULL;
+    comp->loop_stack = NULL;  // Initialize loop stack
 }
 
 static void compiler_add_function(Compiler* comp, const char* name, uint32_t index, uint32_t param_count) {
@@ -2161,13 +2175,33 @@ void compile_while(Compiler* comp, Expr* expr) {
     Instruction jfalse = {.opcode = OP_JUMP_IF_FALSE};
     uint32_t jfalse_offset = bytecode_emit(comp->program, jfalse);
 
+    // Push loop context for break/continue
+    LoopContext loop_ctx;
+    loop_ctx.start_label = start;
+    loop_ctx.end_label = 0;  // Will be set after body
+    loop_ctx.pending_breaks = NULL;  // Initialize pending breaks list
+    loop_ctx.parent = comp->loop_stack;
+    comp->loop_stack = &loop_ctx;
+
     compile_expr(comp, expr->data.while_loop.body);
+
+    // Pop loop context
+    comp->loop_stack = loop_ctx.parent;
 
     Instruction jump = {.opcode = OP_JUMP, .operand.jump.target = start};
     bytecode_emit(comp->program, jump);
 
     uint32_t end = comp->program->instruction_count;
     bytecode_patch_jump(comp->program, jfalse_offset, end);
+    
+    // Patch all pending break jumps
+    PendingJump* pending = loop_ctx.pending_breaks;
+    while (pending) {
+        bytecode_patch_jump(comp->program, pending->instruction_offset, end);
+        PendingJump* next = pending->next;
+        free(pending);
+        pending = next;
+    }
 }
 
 void compile_io_write(Compiler* comp, Expr* expr) {
@@ -2261,6 +2295,30 @@ void compile_expr(Compiler* comp, Expr* expr) {
             break;
         case EXPR_WHILE:
             compile_while(comp, expr);
+            break;
+        case EXPR_BREAK:
+            // Jump to end of nearest enclosing loop
+            if (!comp->loop_stack) {
+                fprintf(stderr, "Error: break outside of loop\n");
+                exit(1);
+            }
+            // Emit jump and add to pending list for later patching
+            Instruction break_jump = {.opcode = OP_JUMP};
+            uint32_t break_offset = bytecode_emit(comp->program, break_jump);
+            // Add to pending breaks
+            PendingJump* pending_break = malloc(sizeof(PendingJump));
+            pending_break->instruction_offset = break_offset;
+            pending_break->next = comp->loop_stack->pending_breaks;
+            comp->loop_stack->pending_breaks = pending_break;
+            break;
+        case EXPR_CONTINUE:
+            // Jump to start of nearest enclosing loop
+            if (!comp->loop_stack) {
+                fprintf(stderr, "Error: continue outside of loop\n");
+                exit(1);
+            }
+            Instruction cont_jump = {.opcode = OP_JUMP, .operand.jump.target = comp->loop_stack->start_label};
+            bytecode_emit(comp->program, cont_jump);
             break;
         case EXPR_IO_WRITE:
             compile_io_write(comp, expr);
