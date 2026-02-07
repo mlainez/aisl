@@ -1,4 +1,5 @@
 (module test_all_string_ops
+  (import string_utils)
   (fn test_split text string delim string -> array
     (ret (call string_split text delim)))
   

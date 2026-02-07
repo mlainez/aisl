@@ -1,4 +1,5 @@
 (module test_new_modules
+  (import string_utils)
   (import filesystem)
   (import network)
   (import text_utils)

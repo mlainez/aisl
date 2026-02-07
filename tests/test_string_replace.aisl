@@ -1,4 +1,5 @@
 (module test_string_replace
+  (import string_utils)
   (fn replace text string old string new string -> string
     (ret (call string_replace text old new)))
   

@@ -1,6 +1,6 @@
 (module test_string_simple
   (fn i32_to_str x int -> string
-    (ret (call string_from_i32 x)))
+    (ret (call string_from_i64 x)))
   
   (test-spec i32_to_str
     (case "convert 42"
@@ -16,4 +16,4 @@
       (input -10)
       (expect "-10")))
   
-  (meta-note "Tests string_from_i32 conversion"))
+  (meta-note "Tests string_from_i64 conversion"))

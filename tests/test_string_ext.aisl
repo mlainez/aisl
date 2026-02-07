@@ -1,4 +1,5 @@
 (module test_string_ext
+  (import string_utils)
   (fn starts_with msg string prefix string -> bool
     (ret (call string_starts_with msg prefix)))
   

@@ -1,4 +1,5 @@
 (module test_real_api
+  (import json_utils)
   (fn fetch_github_api url string -> string
     (ret (call http_get url)))
   

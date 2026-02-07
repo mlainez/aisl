@@ -1,18 +1,19 @@
-(module test_result_ok
+(module test_ok
+  (import result)
   (fn create_ok_result value int -> int
-    (set result string (call result_ok value))
+    (set result string (call ok value))
     (set is_success bool (call is_ok result))
     (if is_success
       (ret 1))
     (ret 0))
   
   (test-spec create_ok_result
-    (case "result_ok creates successful result"
+    (case "ok creates successful result"
       (input 42)
       (expect 1)))
   
   (fn unwrap_ok_value value int -> int
-    (set result string (call result_ok value))
+    (set result string (call ok value))
     (set extracted int (call unwrap result))
     (ret extracted))
   

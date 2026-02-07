@@ -1,7 +1,10 @@
 (module test_for_loop
   (fn sum_recursive start int end int -> int
-    (ret (call if_i32 (call ge start end) 0
-      (call add start (call sum_recursive (call add start 1) end)))))
+    (if (call ge start end)
+      (ret 0))
+    (set next int (call add start 1))
+    (set rest int (call sum_recursive next end))
+    (ret (call add start rest)))
   
   (test-spec sum_recursive
     (case "sum 0 to 10"
@@ -14,4 +17,4 @@
       (input 0 0)
       (expect 0)))
   
-  (meta-note "Tests for-loop-like behavior using recursive summation"))
+  (meta-note "Tests for-loop-like behavior using recursive summation with if statements"))

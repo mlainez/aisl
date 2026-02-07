@@ -1,4 +1,5 @@
 (module test_simple
+  (import string_utils)
   (fn split_by_space s string -> string
     (ret (call array_get (call string_split s " ") 0)))
   

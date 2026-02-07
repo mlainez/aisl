@@ -1,14 +1,14 @@
 (module fibonacci
   (fn fib_nth n int -> int
-    (ret (call if_i32 
-      (call eq n 0)
-      0
-      (call if_i32 
-        (call eq n 1)
-        1
-        (call add 
-          (call fib_nth (call sub n 1))
-          (call fib_nth (call sub n 2)))))))
+    (if (call eq n 0)
+      (ret 0))
+    (if (call eq n 1)
+      (ret 1))
+    (set n_minus_1 int (call sub n 1))
+    (set n_minus_2 int (call sub n 2))
+    (set fib1 int (call fib_nth n_minus_1))
+    (set fib2 int (call fib_nth n_minus_2))
+    (ret (call add fib1 fib2)))
   
   (test-spec fib_nth
     (case "fibonacci 0"
@@ -33,4 +33,4 @@
       (input 6)
       (expect 8)))
   
-  (meta-note "Tests recursive fibonacci sequence calculation"))
+  (meta-note "Tests recursive fibonacci sequence calculation using if statements"))

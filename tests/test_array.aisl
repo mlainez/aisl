@@ -1,4 +1,5 @@
 (module test_array
+  (import json_utils)
   (fn json_array_push_length val int -> int
     (ret (call json_length (call json_push (call json_new_array) val))))
   

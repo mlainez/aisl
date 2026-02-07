@@ -1,4 +1,5 @@
 (module test_json_type
+  (import json_utils)
   (fn main -> int
     (call print "Testing JSON type detection:")
     

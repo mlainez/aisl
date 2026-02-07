@@ -1,6 +1,7 @@
 (module test_result_unwrap_or
+  (import result)
   (fn unwrap_or_with_ok value int default int -> int
-    (set result string (call result_ok value))
+    (set result string (call ok value))
     (set extracted int (call unwrap_or result default))
     (ret extracted))
   
@@ -10,7 +11,7 @@
       (expect 42)))
   
   (fn unwrap_or_with_err code int default int -> int
-    (set result string (call result_err code "Error"))
+    (set result string (call err code "Error"))
     (set extracted int (call unwrap_or result default))
     (ret extracted))
   

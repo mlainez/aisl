@@ -1,4 +1,5 @@
 (module test_split
+  (import string_utils)
   (fn split_get text string delim string idx int -> string
     (ret (call array_get (call string_split text delim) idx)))
   

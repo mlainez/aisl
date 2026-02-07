@@ -1,4 +1,5 @@
 (module test_string_trim
+  (import string_utils)
   (fn trim input string -> string
     (ret (call string_trim input)))
   

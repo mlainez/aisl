@@ -1,4 +1,5 @@
 (module test_simple
+  (import json_utils)
   (fn create_object_with_name name string -> string
     (ret (call json_stringify (call json_set (call json_new_object) "name" name))))
   

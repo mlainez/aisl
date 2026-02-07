@@ -1,4 +1,5 @@
 (module test_json
+  (import json_utils)
   (fn parse_and_get_name json_str string -> string
     (ret (call json_get (call json_parse json_str) "name")))
   

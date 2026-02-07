@@ -1,18 +1,19 @@
-(module test_result_err
+(module test_err
+  (import result)
   (fn create_err_result code int -> int
-    (set result string (call result_err code "Test error"))
+    (set result string (call err code "Test error"))
     (set is_error bool (call is_err result))
     (if is_error
       (ret 1))
     (ret 0))
   
   (test-spec create_err_result
-    (case "result_err creates error result"
+    (case "err creates error result"
       (input 404)
       (expect 1)))
   
   (fn get_error_info code int -> int
-    (set result string (call result_err code "Error message"))
+    (set result string (call err code "Error message"))
     (set err_code int (call error_code result))
     (ret err_code))
   

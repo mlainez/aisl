@@ -1,11 +1,16 @@
 (module test
   (fn count_up_to limit int -> int
     (set counter int 0)
-    (set counter int (call if_i32 (call lt counter limit) (call add counter 1) counter))
-    (set counter int (call if_i32 (call lt counter limit) (call add counter 1) counter))
-    (set counter int (call if_i32 (call lt counter limit) (call add counter 1) counter))
-    (set counter int (call if_i32 (call lt counter limit) (call add counter 1) counter))
-    (set counter int (call if_i32 (call lt counter limit) (call add counter 1) counter))
+    (if (call lt counter limit)
+      (set counter int (call add counter 1)))
+    (if (call lt counter limit)
+      (set counter int (call add counter 1)))
+    (if (call lt counter limit)
+      (set counter int (call add counter 1)))
+    (if (call lt counter limit)
+      (set counter int (call add counter 1)))
+    (if (call lt counter limit)
+      (set counter int (call add counter 1)))
     (ret counter))
   
   (test-spec count_up_to
@@ -19,4 +24,4 @@
       (input 0)
       (expect 0)))
   
-  (meta-note "Tests iterative counting using conditional increment pattern"))
+  (meta-note "Tests iterative counting using if statement pattern"))

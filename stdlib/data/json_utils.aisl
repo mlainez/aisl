@@ -1,4 +1,4 @@
-(module json
+(module json_utils
   (fn skip_whitespace text string pos int -> int
     (set len int (call string_length text))
     (while (call lt pos len)

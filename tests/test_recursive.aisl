@@ -17,10 +17,11 @@
       (expect -12)))
   
   (fn factorial n int -> int
-    (ret (call if_i32 
-      (call le n 1)
-      1
-      (call mul n (call factorial (call sub n 1))))))
+    (if (call le n 1)
+      (ret 1))
+    (set n_minus_1 int (call sub n 1))
+    (set fact_rest int (call factorial n_minus_1))
+    (ret (call mul n fact_rest)))
   
   (test-spec factorial
     (case "factorial of 5"
@@ -39,4 +40,4 @@
       (input 4)
       (expect 24)))
   
-  (meta-note "Tests recursive function factorial and multiply operation"))
+  (meta-note "Tests recursive factorial function using if statements and multiply operation"))

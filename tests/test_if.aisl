@@ -1,6 +1,9 @@
 (module test
   (fn max_i64 x int y int -> int
-    (ret (call if_i32 (call gt x y) x y)))
+    (set result int y)
+    (if (call gt x y)
+      (set result int x))
+    (ret result))
   
   (test-spec max_i64
     (case "first larger"
@@ -19,4 +22,4 @@
       (input -5 -10)
       (expect -5)))
   
-  (meta-note "Tests if_i32 conditional for finding maximum value"))
+  (meta-note "Tests conditional logic for finding maximum value using if statement"))
