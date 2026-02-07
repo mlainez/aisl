@@ -146,11 +146,31 @@ static const char* get_typed_operation(const char* short_name, TypeKind type) {
     if (strcmp(short_name, "from_f64") == 0) return "string_from_f64";
     if (strcmp(short_name, "from_bool") == 0) return "string_from_bool";
     
+    // I/O operations - handle BEFORE numeric check since print works on all types
+    if (strcmp(short_name, "print") == 0) {
+        switch (type) {
+            case TYPE_I32: return "io_print_i32";
+            case TYPE_I64: return "io_print_i64";
+            case TYPE_F32: return "io_print_f32";
+            case TYPE_F64: return "io_print_f64";
+            case TYPE_BOOL: return "io_print_bool";
+            case TYPE_STRING: return "io_print_str";
+            case TYPE_ARRAY: return "io_print_array";
+            case TYPE_MAP: return "io_print_map";
+            default: return "io_print_i32";
+        }
+    }
+    
     // Length operation - could be array or string, need context
     if (strcmp(short_name, "len") == 0) {
         if (type == TYPE_STRING) return "string_length";
         return "array_length";
     }
+    
+    // Array operations (type-agnostic in VM, but keep existing names)
+    if (strcmp(short_name, "push") == 0) return "array_push";
+    if (strcmp(short_name, "get") == 0) return "array_get";
+    if (strcmp(short_name, "set") == 0) return "array_set";
     
     const char* type_suffix = "";
     
@@ -191,26 +211,6 @@ static const char* get_typed_operation(const char* short_name, TypeKind type) {
         snprintf(buffer, 64, "math_%s%s", short_name, type_suffix);
         return buffer;
     }
-    
-    // I/O operations - dispatch on argument type
-    if (strcmp(short_name, "print") == 0) {
-        switch (type) {
-            case TYPE_I32: return "io_print_i32";
-            case TYPE_I64: return "io_print_i64";
-            case TYPE_F32: return "io_print_f32";
-            case TYPE_F64: return "io_print_f64";
-            case TYPE_BOOL: return "io_print_bool";
-            case TYPE_STRING: return "io_print_str";
-            case TYPE_ARRAY: return "io_print_array";
-            case TYPE_MAP: return "io_print_map";
-            default: return "io_print_i32";
-        }
-    }
-    
-    // Array operations (type-agnostic in VM, but keep existing names)
-    if (strcmp(short_name, "push") == 0) return "array_push";
-    if (strcmp(short_name, "get") == 0) return "array_get";
-    if (strcmp(short_name, "set") == 0) return "array_set";
     
     // Not a polymorphic operation, return as-is
     return short_name;
@@ -386,6 +386,21 @@ void compile_apply(Compiler* comp, Expr* expr) {
         } else if (first_arg->kind == EXPR_LIT_STRING) {
             // String literal
             arg_type = TYPE_STRING;
+        } else if (first_arg->kind == EXPR_LIT_BOOL) {
+            // Boolean literal
+            arg_type = TYPE_BOOL;
+        } else if (first_arg->kind == EXPR_APPLY) {
+            // Nested function call - infer return type
+            if (first_arg->data.apply.func && first_arg->data.apply.func->kind == EXPR_VAR) {
+                const char* func_name = first_arg->data.apply.func->data.var.name;
+                // Comparison operations return bool
+                if (strcmp(func_name, "lt") == 0 || strcmp(func_name, "gt") == 0 ||
+                    strcmp(func_name, "le") == 0 || strcmp(func_name, "ge") == 0 ||
+                    strcmp(func_name, "eq") == 0 || strcmp(func_name, "ne") == 0) {
+                    arg_type = TYPE_BOOL;
+                }
+                // Otherwise default to i32 for arithmetic operations
+            }
         } else if (first_arg->type) {
             // Use type from expression
             arg_type = type_to_typekind(first_arg->type);
@@ -651,26 +666,7 @@ void compile_apply(Compiler* comp, Expr* expr) {
         return;
     }
 
-    // V3.0 Builtins
-    if (strcmp(name, "print") == 0) {
-        // print(str) -> IO_WRITE(1, str)
-        if (expr->data.apply.args == NULL || expr->data.apply.args->next != NULL) {
-            fprintf(stderr, "print expects exactly 1 argument\n");
-            exit(1);
-        }
-        // Push handle (stdout = 1)
-        Instruction push_handle = {.opcode = OP_PUSH_INT, .operand.int_val = 1};
-        bytecode_emit(comp->program, push_handle);
-
-        // Compile the string argument
-        compile_expr(comp, expr->data.apply.args->expr);
-
-        // Perform IO_WRITE
-        Instruction io_write = {.opcode = OP_IO_WRITE};
-        bytecode_emit(comp->program, io_write);
-        return;
-    }
-
+    // V3.0 Builtins - print_int for compatibility
     if (strcmp(name, "print_int") == 0) {
         if (expr->data.apply.args == NULL || expr->data.apply.args->next != NULL) {
             fprintf(stderr, "print_int expects exactly 1 argument\n");
