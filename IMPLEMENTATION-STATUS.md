@@ -94,16 +94,25 @@ Agent constructs provide ergonomic surface language that desugars to Core:
 - Arithmetic: add, sub, mul, div, mod, neg
 - Comparisons: eq, ne, lt, gt, le, ge
 - Math: abs, min, max
-- I/O: print (dispatches to print_i32, print_str, etc.)
+- **I/O: print (✅ FULLY POLYMORPHIC - dispatches to print_i32, print_i64, print_f32, print_f64, print_str, print_bool, print_array, print_map)**
 - Strings: concat, slice, len
 - Arrays: push, get, set
 
 **Type inference**:
 - Variables: Look up type in symbol table
-- Literals: Detect from AST node kind (EXPR_LIT_INT → i32)
-- Nested expressions: Default to i32 for unknown types, preserve TYPE_STRING
+- Literals: Detect from AST node kind (EXPR_LIT_INT → i32, EXPR_LIT_BOOL → bool)
+- **Nested function calls: Infer return type (comparisons → bool, arithmetic → i32)**
+- Fallback: Default to i32 for unknown types, preserve TYPE_STRING
 
-**Test Results**: 81/81 tests pass (100%) with polymorphic operations
+**Polymorphic print implementation** (compiler.c:148-162):
+- ✅ Moved print dispatch BEFORE numeric type check (was unreachable for non-numeric types)
+- ✅ Added boolean literal type inference (EXPR_LIT_BOOL)
+- ✅ Added nested call type inference (EXPR_APPLY) - comparisons return bool
+- ✅ Works with direct values: `(call print "hello")`, `(call print 42)`, `(call print true)`
+- ✅ Works with variables: `(call print my_string)`, `(call print count)`, `(call print flag)`
+- ✅ Works with nested expressions: `(call print (call lt 5 10))` → prints "true"
+
+**Test Results**: 86/86 tests pass (100%) with polymorphic operations including test_polymorphic_print.aisl
 
 **Verdict**: Built-in explosion eliminated. LLMs can write natural code.
 
@@ -247,7 +256,7 @@ OP_FILE_APPEND_RESULT,
 | 4. Result/error type | ✅ DONE | HIGH | Error handling complete |
 | 5. Control flow rules | ✅ DONE | MEDIUM | Behavior is explicit |
 
-**Overall Progress**: 5/5 = **100% Complete**
+**Overall Progress**: 5/5 = **100% Complete** (including polymorphic print)
 
 ---
 
@@ -341,8 +350,9 @@ AISL has successfully achieved:
 3. **Type-directed operations** - Natural code without built-in explosion
 4. **Structured control flow** - While, loop, break, continue desugar perfectly
 5. **Result type for error handling** - Graceful error handling for I/O operations
-6. **100% test pass rate** - 85 tests all passing
-7. **Comprehensive documentation** - 5 markdown files, 1880+ lines total
+6. **Polymorphic print** - Single `print` operation works for all types with type inference
+7. **100% test pass rate** - 86 tests all passing
+8. **Comprehensive documentation** - 5 markdown files, 1880+ lines total
 
 ---
 

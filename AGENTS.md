@@ -250,11 +250,42 @@ Generate these - the compiler desugars them to Core:
 
 ### I/O Operations
 
+**Polymorphic print** - works with all types automatically:
+
 ```lisp
-(call print value)           ; Print (dispatches on type)
-(call print_ln value)        ; Print with newline
-(call read_line)             ; Read line from stdin -> string
+; Print strings
+(call print "Hello")           ; Prints: Hello
+
+; Print integers
+(set x i32 42)
+(call print x)                 ; Prints: 42
+
+; Print booleans
+(set flag bool true)
+(call print flag)              ; Prints: true
+
+; Print nested expressions (type inference!)
+(call print (call lt 5 10))   ; Prints: true
+(call print (call add 2 3))   ; Prints: 5
+
+; Print with newline
+(call print_ln "Done!")        ; Prints: Done!\n
+
+; Read input
+(call read_line)               ; Read line from stdin -> string
 ```
+
+**How it works**: The compiler automatically dispatches to the correct print function based on the value's type:
+- `i32` → `io_print_i32`
+- `i64` → `io_print_i64`  
+- `f32` → `io_print_f32`
+- `f64` → `io_print_f64`
+- `bool` → `io_print_bool`
+- `string` → `io_print_str`
+- `array` → `io_print_array`
+- `map` → `io_print_map`
+
+**You never need to remember the specific function names** - just use `(call print value)`!
 
 ### File Operations
 
