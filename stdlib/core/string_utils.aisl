@@ -162,4 +162,17 @@
       (set result string (call string_concat result ch_str))
       (set i int (call add i 1)))
     
+    (ret result))
+  
+  (fn string_reverse text string -> string
+    (set len int (call string_length text))
+    (set result string "")
+    (set i int (call sub len 1))
+    
+    (while (call ge i 0)
+      (set end int (call add i 1))
+      (set ch string (call string_slice text i end))
+      (set result string (call string_concat result ch))
+      (set i int (call sub i 1)))
+    
     (ret result)))

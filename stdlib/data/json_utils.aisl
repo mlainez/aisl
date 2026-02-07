@@ -229,4 +229,29 @@
       (set i int (call add i 1)))
     
     (set result string (call string_concat result "}"))
-    (ret result)))
+    (ret result))
+  
+  (fn json_new_object -> map
+    (ret (call map_new)))
+  
+  (fn json_new_array -> array
+    (ret (call array_new 10)))
+  
+  (fn json_set obj map key string value string -> map
+    (ret (call map_set obj key value)))
+  
+  (fn json_get obj map key string -> string
+    (ret (call map_get obj key)))
+  
+  (fn json_push arr array value string -> array
+    (call array_push arr value)
+    (ret arr))
+  
+  (fn json_length value array -> int
+    (ret (call array_length value)))
+  
+  (fn json_type value map -> string
+    (set has_keys bool (call map_has value "type"))
+    (if has_keys
+      (ret (call map_get value "type")))
+    (ret "object")))

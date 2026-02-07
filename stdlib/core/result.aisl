@@ -5,10 +5,12 @@
     (set result map (call map_set result "value" value))
     (ret result))
   
-  (fn err error string -> map
+  (fn err code int message string -> map
     (set result map (call map_new))
     (set result map (call map_set result "ok" false))
-    (set result map (call map_set result "error" error))
+    (set code_str string (call string_from_i64 code))
+    (set result map (call map_set result "code" code_str))
+    (set result map (call map_set result "error" message))
     (ret result))
   
   (fn is_ok result map -> bool
@@ -38,4 +40,19 @@
     (ret default))
   
   (fn error_message result map -> string
-    (ret (call map_get result "error"))))
+    (ret (call map_get result "error")))
+  
+  (fn error_code result map -> int
+    (set code_str string (call map_get result "code"))
+    (set len int (call string_length code_str))
+    (set result_int int 0)
+    (set i int 0)
+    
+    (while (call lt i len)
+      (set ch int (call string_get code_str i))
+      (set digit int (call sub ch 48))
+      (set result_int int (call mul result_int 10))
+      (set result_int int (call add result_int digit))
+      (set i int (call add i 1)))
+    
+    (ret result_int)))

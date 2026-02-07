@@ -28,5 +28,25 @@
     (ret (call map_get response "body")))
   
   (fn get_status response map -> int
-    (ret (call http_get_status response))))
+    (ret (call http_get_status response)))
+  
+  (fn get_status_text code int -> string
+    (set result string "Unknown")
+    (if (call eq code 200)
+      (set result string "OK"))
+    (if (call eq code 201)
+      (set result string "Created"))
+    (if (call eq code 204)
+      (set result string "No Content"))
+    (if (call eq code 400)
+      (set result string "Bad Request"))
+    (if (call eq code 401)
+      (set result string "Unauthorized"))
+    (if (call eq code 403)
+      (set result string "Forbidden"))
+    (if (call eq code 404)
+      (set result string "Not Found"))
+    (if (call eq code 500)
+      (set result string "Internal Server Error"))
+    (ret result)))
 
