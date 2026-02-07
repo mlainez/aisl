@@ -1,36 +1,36 @@
 (module result
   (fn ok value string -> map
     (set result map (call map_new))
-    (set result map (call map_set result "ok" true))
+    (set result map (call map_set result "ok" "true"))
     (set result map (call map_set result "value" value))
     (ret result))
   
   (fn err code int message string -> map
     (set result map (call map_new))
-    (set result map (call map_set result "ok" false))
+    (set result map (call map_set result "ok" "false"))
     (set code_str string (call string_from_i64 code))
     (set result map (call map_set result "code" code_str))
     (set result map (call map_set result "error" message))
     (ret result))
   
   (fn is_ok result map -> bool
-    (ret (call map_get result "ok")))
+    (set ok_str string (call map_get result "ok"))
+    (ret (call string_eq ok_str "true")))
   
   (fn is_err result map -> bool
-    (set ok_val bool (call map_get result "ok"))
-    (set false_val bool false)
-    (if ok_val
-      (ret false_val))
-    (set true_val bool true)
-    (ret true_val))
+    (set ok_str string (call map_get result "ok"))
+    (set is_ok_val bool (call string_eq ok_str "true"))
+    (if is_ok_val
+      (ret false))
+    (ret true))
   
   (fn unwrap result map -> string
     (set ok_val bool (call is_ok result))
     (set result_val string "")
     (if ok_val
-      (set result_val string (call map_get result "value"))
-      (ret result_val))
-    (call print "PANIC: unwrap called on err result\n")
+      (set result_val string (call map_get result "value")))
+    (ifnot ok_val
+      (call print "PANIC: unwrap called on err result\n"))
     (ret result_val))
   
   (fn unwrap_or result map default string -> string

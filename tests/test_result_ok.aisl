@@ -1,7 +1,8 @@
 (module test_ok
   (import result)
   (fn create_ok_result value int -> int
-    (set result string (call ok value))
+    (set val_str string (call string_from_i64 value))
+    (set result map (call ok val_str))
     (set is_success bool (call is_ok result))
     (if is_success
       (ret 1))
@@ -12,20 +13,21 @@
       (input 42)
       (expect 1)))
   
-  (fn unwrap_ok_value value int -> int
-    (set result string (call ok value))
-    (set extracted int (call unwrap result))
+  (fn unwrap_ok_value value int -> string
+    (set val_str string (call string_from_i64 value))
+    (set result map (call ok val_str))
+    (set extracted string (call unwrap result))
     (ret extracted))
   
   (test-spec unwrap_ok_value
     (case "unwrap extracts value from ok result"
       (input 100)
-      (expect 100))
+      (expect "100"))
     (case "unwrap works with zero"
       (input 0)
-      (expect 0))
+      (expect "0"))
     (case "unwrap works with negative"
       (input -50)
-      (expect -50)))
+      (expect "-50")))
   
   (meta-note "Tests result type: creating Ok results and unwrapping values"))
