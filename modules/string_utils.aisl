@@ -1,0 +1,71 @@
+(module string_utils
+  (fn string_is_empty s string -> bool
+    (set len int (call string_length s))
+    (ret (call eq len 0)))
+  
+  (fn string_first_char s string -> string
+    (ret (call string_slice s 0 1)))
+  
+  (fn string_last_char s string -> string
+    (set len int (call string_length s))
+    (set last_idx int (call sub len 1))
+    (ret (call string_slice s last_idx len)))
+  
+  (fn string_starts_with_char s string prefix string -> bool
+    (set first string (call string_first_char s))
+    (ret (call string_eq first prefix)))
+  
+  (fn string_ends_with_char s string suffix string -> bool
+    (set last string (call string_last_char s))
+    (ret (call string_eq last suffix)))
+  
+  (fn string_reverse s string -> string
+    (set len int (call string_length s))
+    (set result string "")
+    (set i int (call sub len 1))
+    (while (call ge i 0)
+      (set char string (call string_slice s i (call add i 1)))
+      (set result string (call string_concat result char))
+      (set i int (call sub i 1)))
+    (ret result))
+  
+  (fn string_repeat s string count int -> string
+    (set result string "")
+    (set i int 0)
+    (while (call lt i count)
+      (set result string (call string_concat result s))
+      (set i int (call add i 1)))
+    (ret result))
+  
+  (fn string_count_char s string target string -> int
+    (set len int (call string_length s))
+    (set count int 0)
+    (set i int 0)
+    (while (call lt i len)
+      (set char string (call string_slice s i (call add i 1)))
+      (set matches bool (call string_eq char target))
+      (if matches
+        (set count int (call add count 1)))
+      (set i int (call add i 1)))
+    (ret count))
+  
+  (fn string_is_numeric s string -> bool
+    (set len int (call string_length s))
+    (set is_empty bool (call eq len 0))
+    (if is_empty
+      (ret false))
+    (set i int 0)
+    (while (call lt i len)
+      (set char string (call string_slice s i (call add i 1)))
+      (set is_digit bool (call string_contains "0123456789" char))
+      (if is_digit
+        (set i int (call add i 1))
+        (continue))
+      (set is_minus bool (call string_eq char "-"))
+      (set is_first bool (call eq i 0))
+      (if is_minus
+        (if is_first
+          (set i int (call add i 1))
+          (continue)))
+      (ret false))
+    (ret true)))

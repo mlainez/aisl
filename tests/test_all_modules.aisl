@@ -1,0 +1,44 @@
+(module test_all_modules
+  (import math)
+  (import math_extended)
+  (import array_utils)
+  (import conversion)
+  (import validation)
+  
+  (fn main -> int
+    (call print "=== Testing math module ===")
+    (set abs_result int (call abs -42))
+    (call print abs_result)
+    (set min_result int (call min 10 5))
+    (call print min_result)
+    
+    (call print "=== Testing math_extended module ===")
+    (set clamped int (call clamp 15 0 10))
+    (call print clamped)
+    (set sign_result int (call sign -5))
+    (call print sign_result)
+    (set squared int (call square 7))
+    (call print squared)
+    
+    (call print "=== Testing array_utils module ===")
+    (set arr array (call array_range 1 6))
+    (set sum int (call array_sum arr 5))
+    (call print sum)
+    (set found_idx int (call array_find arr 3 5))
+    (call print found_idx)
+    
+    (call print "=== Testing conversion module ===")
+    (set bool_val bool true)
+    (set int_val int (call bool_to_int bool_val))
+    (call print int_val)
+    (set miles float (call kilometers_to_miles 10.0))
+    (call print miles)
+    
+    (call print "=== Testing validation module ===")
+    (set in_range_result bool (call in_range 5 0 10))
+    (call print in_range_result)
+    (set is_pos bool (call is_positive 42))
+    (call print is_pos)
+    
+    (call print "All tests completed!")
+    (ret 0)))

@@ -1,0 +1,8 @@
+(module test_import_string
+  (import string)
+  
+  (fn main -> int
+    (set text string "hello world")
+    (set len int (call string_length text))
+    (call print len)
+    (ret 0)))

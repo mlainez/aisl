@@ -1,4 +1,4 @@
-(mod test_lowercase_types
+(module test_lowercase_types
   (fn return_i32 a int -> int
     (ret a))
   

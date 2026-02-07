@@ -1,4 +1,4 @@
-(mod test_ops
+(module test_ops
   (fn split_get_first text string delim string -> string
     (ret (call array_get (call string_split text delim) 0)))
   

@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "ast_export.h"
 #include "desugar.h"
+#include "module_loader.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,6 +53,8 @@ typedef struct {
     LoopContext* loop_stack;  // Stack of enclosing loops
     LabelInfo* labels;  // Map of label names to positions
     PendingJump* pending_jumps;  // Jumps that need patching
+    Module* module;  // Module being compiled (for import checking)
+    ModuleCache* module_cache;  // Cache for loaded modules
 } Compiler;
 
 void compile_expr(Compiler* comp, Expr* expr);
@@ -66,6 +69,8 @@ void compiler_init(Compiler* comp) {
     comp->loop_stack = NULL;  // Initialize loop stack
     comp->labels = NULL;  // Initialize label map
     comp->pending_jumps = NULL;  // Initialize pending jumps
+    comp->module = NULL;  // Initialize module (set later in compile_module)
+    comp->module_cache = module_cache_new();  // Initialize module cache
 }
 
 static void compiler_add_function(Compiler* comp, const char* name, uint32_t index, uint32_t param_count) {
@@ -129,7 +134,7 @@ static TypeKind type_to_typekind(Type* type) {
 // Helper to get typed operation name from short name and type
 static const char* get_typed_operation(const char* short_name, TypeKind type) {
     // Map short names to typed operation names
-    // For example: "add" + TYPE_I32 -> "op_add_i32"
+    // For example: "add" + TYPE_INT -> "op_add_i64"
     
     // Use multiple buffers to avoid overwrites during nested compilation
     static char buffers[8][64];
@@ -149,15 +154,13 @@ static const char* get_typed_operation(const char* short_name, TypeKind type) {
     // I/O operations - handle BEFORE numeric check since print works on all types
     if (strcmp(short_name, "print") == 0) {
         switch (type) {
-            case TYPE_I32: return "io_print_i32";
-            case TYPE_I64: return "io_print_i64";
-            case TYPE_F32: return "io_print_f32";
-            case TYPE_F64: return "io_print_f64";
+            case TYPE_INT: return "io_print_i64";    // int is always i64
+            case TYPE_FLOAT: return "io_print_f64";  // float is always f64
             case TYPE_BOOL: return "io_print_bool";
             case TYPE_STRING: return "io_print_str";
             case TYPE_ARRAY: return "io_print_array";
             case TYPE_MAP: return "io_print_map";
-            default: return "io_print_i32";
+            default: return "io_print_i64";
         }
     }
     
@@ -175,10 +178,8 @@ static const char* get_typed_operation(const char* short_name, TypeKind type) {
     const char* type_suffix = "";
     
     switch (type) {
-        case TYPE_I32: type_suffix = "_i32"; break;
-        case TYPE_I64: type_suffix = "_i64"; break;
-        case TYPE_F32: type_suffix = "_f32"; break;
-        case TYPE_F64: type_suffix = "_f64"; break;
+        case TYPE_INT: type_suffix = "_i64"; break;    // int is always i64
+        case TYPE_FLOAT: type_suffix = "_f64"; break;  // float is always f64
         default:
             // Not a numeric type, return original name
             return short_name;
@@ -207,7 +208,9 @@ static const char* get_typed_operation(const char* short_name, TypeKind type) {
     
     if (strcmp(short_name, "abs") == 0 ||
         strcmp(short_name, "min") == 0 ||
-        strcmp(short_name, "max") == 0) {
+        strcmp(short_name, "max") == 0 ||
+        strcmp(short_name, "sqrt") == 0 ||
+        strcmp(short_name, "pow") == 0) {
         snprintf(buffer, 64, "math_%s%s", short_name, type_suffix);
         return buffer;
     }
@@ -342,6 +345,17 @@ void compile_apply(Compiler* comp, Expr* expr) {
     }
 
     const char* name = func->data.var.name;
+    
+    // Skip module checking for:
+    // 1. Core IR constructs (label, goto, ifnot)
+    // 2. Variable assignments (set_<varname> pseudo-functions from v3 syntax)
+    bool is_core_ir = (strcmp(name, "label") == 0 || strcmp(name, "goto") == 0 || 
+                       strcmp(name, "ifnot") == 0);
+    bool is_var_assignment = (strncmp(name, "set_", 4) == 0);
+    
+    // Module checking removed - functions are resolved at link time after
+    // compiling imported modules. If a function doesn't exist, compilation
+    // will fail naturally when trying to call it.
 
     // Type-directed dispatch for polymorphic operations
     // Check if this is a short polymorphic operation (add, sub, mul, etc.)
@@ -352,7 +366,8 @@ void compile_apply(Compiler* comp, Expr* expr) {
         strcmp(name, "lt") == 0 || strcmp(name, "gt") == 0 ||
         strcmp(name, "le") == 0 || strcmp(name, "ge") == 0 ||
         strcmp(name, "abs") == 0 || strcmp(name, "min") == 0 ||
-        strcmp(name, "max") == 0 ||
+        strcmp(name, "max") == 0 || strcmp(name, "sqrt") == 0 ||
+        strcmp(name, "pow") == 0 ||
         strcmp(name, "print") == 0 || strcmp(name, "len") == 0 ||
         strcmp(name, "push") == 0 || strcmp(name, "get") == 0 ||
         strcmp(name, "set") == 0 || strcmp(name, "concat") == 0 ||
@@ -368,7 +383,7 @@ void compile_apply(Compiler* comp, Expr* expr) {
         
         // Check if first argument is a variable reference
         Expr* first_arg = expr->data.apply.args->expr;
-        TypeKind arg_type = TYPE_I32;  // Default to i32 if type can't be determined
+        TypeKind arg_type = TYPE_INT;  // Default to int (i64) if type can't be determined
         
         if (first_arg->kind == EXPR_VAR) {
             // Look up variable type
@@ -378,11 +393,11 @@ void compile_apply(Compiler* comp, Expr* expr) {
                 exit(1);
             }
         } else if (first_arg->kind == EXPR_LIT_INT) {
-            // Integer literal defaults to i32
-            arg_type = TYPE_I32;
+            // Integer literal defaults to int (i64)
+            arg_type = TYPE_INT;
         } else if (first_arg->kind == EXPR_LIT_FLOAT) {
-            // Float literal defaults to f64
-            arg_type = TYPE_F64;
+            // Float literal defaults to float (f64)
+            arg_type = TYPE_FLOAT;
         } else if (first_arg->kind == EXPR_LIT_STRING) {
             // String literal
             arg_type = TYPE_STRING;
@@ -399,18 +414,18 @@ void compile_apply(Compiler* comp, Expr* expr) {
                     strcmp(func_name, "eq") == 0 || strcmp(func_name, "ne") == 0) {
                     arg_type = TYPE_BOOL;
                 }
-                // Otherwise default to i32 for arithmetic operations
+                // Otherwise default to int for arithmetic operations
             }
         } else if (first_arg->type) {
             // Use type from expression
             arg_type = type_to_typekind(first_arg->type);
-            // If we got TYPE_UNIT (unknown type from nested expr), default to TYPE_I32
+            // If we got TYPE_UNIT (unknown type from nested expr), default to TYPE_INT
             // But preserve TYPE_STRING and other known types
             if (arg_type == TYPE_UNIT) {
-                arg_type = TYPE_I32;
+                arg_type = TYPE_INT;
             }
         }
-        // Otherwise use default TYPE_I32
+        // Otherwise use default TYPE_INT
         
         // Map to typed operation
         const char* typed_name = get_typed_operation(name, arg_type);
@@ -793,45 +808,7 @@ void compile_apply(Compiler* comp, Expr* expr) {
         return;
     }
 
-    // V4.0 Typed arithmetic operations - i32
-    if (strcmp(name, "op_add_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_add_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_ADD_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_sub_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_sub_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_SUB_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_mul_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_mul_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_MUL_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_div_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_div_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_DIV_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-
-    // V4.0 Typed arithmetic operations - i64
+    // V4.0 Typed arithmetic operations - i64 (int is always i64 in AISL)
     if (strcmp(name, "op_add_i64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
             fprintf(stderr, "op_add_i64 expects 2 arguments\n");
@@ -868,46 +845,17 @@ void compile_apply(Compiler* comp, Expr* expr) {
         bytecode_emit(comp->program, inst);
         return;
     }
-
-    // V4.0 Typed arithmetic operations - f32
-    if (strcmp(name, "op_add_f32") == 0) {
+    if (strcmp(name, "op_mod_i64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_add_f32 expects 2 arguments\n");
+            fprintf(stderr, "op_mod_i64 expects 2 arguments\n");
             exit(1);
         }
-        Instruction inst = {.opcode = OP_ADD_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_sub_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_sub_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_SUB_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_mul_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_mul_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_MUL_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_div_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_div_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_DIV_F64};
+        Instruction inst = {.opcode = OP_MOD_I64};
         bytecode_emit(comp->program, inst);
         return;
     }
 
-    // V4.0 Typed arithmetic operations - f64
+    // V4.0 Typed arithmetic operations - f64 (float is always f64 in AISL)
     if (strcmp(name, "op_add_f64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
             fprintf(stderr, "op_add_f64 expects 2 arguments\n");
@@ -945,63 +893,27 @@ void compile_apply(Compiler* comp, Expr* expr) {
         return;
     }
 
-    // V4.0 Typed comparison operations - i32
-    if (strcmp(name, "op_eq_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_eq_i32 expects 2 arguments\n");
+    // V4.0 Typed negation operations
+    if (strcmp(name, "op_neg_i64") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "op_neg_i64 expects 1 argument\n");
             exit(1);
         }
-        Instruction inst = {.opcode = OP_EQ_I64};
+        Instruction inst = {.opcode = OP_NEG_I64};
         bytecode_emit(comp->program, inst);
         return;
     }
-    if (strcmp(name, "op_ne_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_ne_i32 expects 2 arguments\n");
+    if (strcmp(name, "op_neg_f64") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "op_neg_f64 expects 1 argument\n");
             exit(1);
         }
-        Instruction inst = {.opcode = OP_NE_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_lt_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_lt_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_LT_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_gt_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_gt_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_GT_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_le_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_le_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_LE_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_ge_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_ge_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_GE_I64};
+        Instruction inst = {.opcode = OP_NEG_F64};
         bytecode_emit(comp->program, inst);
         return;
     }
 
-    // V4.0 Typed comparison operations - i64
+    // V4.0 Typed comparison operations - i64 (int is always i64 in AISL)
     if (strcmp(name, "op_eq_i64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
             fprintf(stderr, "op_eq_i64 expects 2 arguments\n");
@@ -1057,63 +969,7 @@ void compile_apply(Compiler* comp, Expr* expr) {
         return;
     }
 
-    // V4.0 Typed comparison operations - f32
-    if (strcmp(name, "op_eq_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_eq_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_EQ_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_ne_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_ne_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_NE_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_lt_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_lt_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_LT_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_gt_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_gt_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_GT_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_le_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_le_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_LE_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "op_ge_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "op_ge_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_GE_F64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-
-    // V4.0 Typed comparison operations - f64
+    // V4.0 Typed comparison operations - f64 (float is always f64 in AISL)
     if (strcmp(name, "op_eq_f64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
             fprintf(stderr, "op_eq_f64 expects 2 arguments\n");
@@ -1298,30 +1154,12 @@ void compile_apply(Compiler* comp, Expr* expr) {
         bytecode_emit(comp->program, inst);
         return;
     }
-    if (strcmp(name, "math_abs_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "math_abs_i32 expects 1 argument\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_MATH_ABS_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
     if (strcmp(name, "math_abs_i64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 1) {
             fprintf(stderr, "math_abs_i64 expects 1 argument\n");
             exit(1);
         }
         Instruction inst = {.opcode = OP_MATH_ABS_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "math_abs_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "math_abs_f32 expects 1 argument\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_MATH_ABS_F64};
         bytecode_emit(comp->program, inst);
         return;
     }
@@ -1334,30 +1172,12 @@ void compile_apply(Compiler* comp, Expr* expr) {
         bytecode_emit(comp->program, inst);
         return;
     }
-    if (strcmp(name, "math_min_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "math_min_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_MATH_MIN_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
     if (strcmp(name, "math_min_i64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
             fprintf(stderr, "math_min_i64 expects 2 arguments\n");
             exit(1);
         }
         Instruction inst = {.opcode = OP_MATH_MIN_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "math_min_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "math_min_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_MATH_MIN_F64};
         bytecode_emit(comp->program, inst);
         return;
     }
@@ -1370,30 +1190,12 @@ void compile_apply(Compiler* comp, Expr* expr) {
         bytecode_emit(comp->program, inst);
         return;
     }
-    if (strcmp(name, "math_max_i32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "math_max_i32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_MATH_MAX_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
     if (strcmp(name, "math_max_i64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
             fprintf(stderr, "math_max_i64 expects 2 arguments\n");
             exit(1);
         }
         Instruction inst = {.opcode = OP_MATH_MAX_I64};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "math_max_f32") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "math_max_f32 expects 2 arguments\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_MATH_MAX_F64};
         bytecode_emit(comp->program, inst);
         return;
     }
@@ -1460,12 +1262,12 @@ void compile_apply(Compiler* comp, Expr* expr) {
     }
     
     if (strcmp(name, "string_eq") == 0) {
-        // String equality using generic comparison
+        // String equality comparison
         if (compile_args(comp, expr->data.apply.args) != 2) {
             fprintf(stderr, "string_eq expects 2 arguments\n");
             exit(1);
         }
-        Instruction inst = {.opcode = OP_EQ_INT};  // Use generic equality
+        Instruction inst = {.opcode = OP_EQ_STR};
         bytecode_emit(comp->program, inst);
         return;
     }
@@ -2789,7 +2591,100 @@ void compile_function(Compiler* comp, Definition* def) {
     bytecode_set_function_locals(comp->program, func_idx, comp->max_local_count);
 }
 
+// Compile an imported module and add its exports to the function table
+static void compile_imported_module(Compiler* comp, const char* module_name) {
+    // Check if already loaded
+    LoadedModule* loaded = module_cache_get(comp->module_cache, module_name);
+    if (loaded && loaded->parsed_module) {
+        return;  // Already compiled
+    }
+    
+    // Load module (finds .aisl file in search paths)
+    loaded = module_load(comp->module_cache, module_name);
+    if (!loaded) {
+        fprintf(stderr, "Error: Cannot load module '%s'\n", module_name);
+        exit(1);
+    }
+    
+    // Read and parse the module file
+    FILE* f = fopen(loaded->module_path, "r");
+    if (!f) {
+        fprintf(stderr, "Error: Cannot open %s\n", loaded->module_path);
+        exit(1);
+    }
+    
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    
+    char* source = malloc(fsize + 1);
+    fread(source, 1, fsize, f);
+    source[fsize] = '\0';
+    fclose(f);
+    
+    // Parse module
+    Lexer lexer;
+    lexer_init(&lexer, source);
+    
+    Parser parser;
+    parser_init(&parser, &lexer);
+    
+    Module* imported_module = parser_parse_module(&parser);
+    
+    if (parser.has_error) {
+        fprintf(stderr, "Error parsing module %s: %s\n", module_name, parser.error_msg);
+        free(source);
+        exit(1);
+    }
+    
+    // Store parsed module
+    loaded->parsed_module = imported_module;
+    
+    // Recursively compile its imports first
+    for (int i = 0; i < imported_module->import_count; i++) {
+        // Recursive import handling - TODO
+        (void)i;  // Suppress unused warning for now
+    }
+    
+    // Compile the imported module's functions
+    // First pass: declare all functions
+    DefList* current = imported_module->definitions;
+    while (current) {
+        if (current->def->kind == DEF_FUNCTION) {
+            uint32_t param_count = 0;
+            ParamList* param = current->def->data.func.params;
+            while (param) {
+                param_count++;
+                param = param->next;
+            }
+            uint32_t idx = bytecode_declare_function(comp->program, current->def->name, 0);
+            compiler_add_function(comp, current->def->name, idx, param_count);
+        }
+        current = current->next;
+    }
+    
+    // Second pass: compile function bodies
+    current = imported_module->definitions;
+    while (current) {
+        if (current->def->kind == DEF_FUNCTION) {
+            compile_function(comp, current->def);
+        }
+        current = current->next;
+    }
+    
+    free(source);
+}
+
 void compile_module(Compiler* comp, Module* module) {
+    comp->module = module;  // Store module for import checking
+    
+    // First: compile all imported modules
+    for (int i = 0; i < module->import_count; i++) {
+        Import* imp = module->imports[i];
+        compile_imported_module(comp, imp->module_name);
+    }
+    
+    // Then: compile this module
     DefList* current = module->definitions;
     while (current) {
         if (current->def->kind == DEF_FUNCTION) {

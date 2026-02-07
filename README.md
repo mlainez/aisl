@@ -19,7 +19,7 @@ This architecture prevents long-term entropy: the Core IR remains stable forever
 ### Hello World
 
 ```scheme
-(mod hello
+(module hello
   (fn main () -> i32
     (call print "Hello, World!")
     (ret 0)))
@@ -121,7 +121,7 @@ This architecture prevents long-term entropy: the Core IR remains stable forever
 ### Factorial (Recursion)
 
 ```scheme
-(mod factorial
+(module factorial
   (fn fact ((n i32)) -> i32
     (set is_zero bool (call op_eq_i32 n 0))
     (set result i32 (call if_i32 is_zero 1 0))
@@ -141,7 +141,7 @@ This architecture prevents long-term entropy: the Core IR remains stable forever
 ### Web Server
 
 ```scheme
-(mod sinatra
+(module sinatra
   (fn handle_connection ((client_sock string)) -> i32
     (set request string (call tcp_receive client_sock 4096))
     (set has_json bool (call string_contains request "/hello.json"))
@@ -205,7 +205,7 @@ AISL has a built-in test framework. All test files in `tests/` directory must fo
 
 **Example:**
 ```lisp
-(mod test_addition
+(module test_addition
   (fn add_numbers ((a i32) (b i32)) -> i32
     (ret (call add a b)))
   

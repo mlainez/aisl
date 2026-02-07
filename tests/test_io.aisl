@@ -1,4 +1,4 @@
-(mod test_io
+(module test_io
   (fn print_message msg string -> int
     (call print msg)
     (ret 0))

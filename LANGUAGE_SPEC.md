@@ -29,7 +29,7 @@ This is what you write and what LLMs generate.
 ### Program Structure
 
 ```
-program ::= (mod <name> <function>*)
+program ::= (module <name> <function>*)
 
 function ::= (fn <name> <param_flat>* -> <return_type> <statement>*)
            | (fn <name> (<param>*) -> <return_type> <statement>*)   [deprecated]
@@ -66,7 +66,7 @@ Test files using the `test-spec` framework don't require a `main` function.
 ### Simple Example
 
 ```scheme
-(mod hello
+(module hello
   (fn main -> int
     (call print "Hello, World!")
     (ret 0)))
@@ -503,7 +503,7 @@ The compiler automatically selects the correct operation based on variable types
 ## Complete Example: Web Server
 
 ```scheme
-(mod sinatra
+(module sinatra
   (fn handle_connection ((client_sock string)) -> i32
     (set request string (call tcp_receive client_sock 4096))
     (set has_json bool (call string_contains request "GET /hello.json "))
@@ -585,7 +585,7 @@ Every test file must include:
 ### Example Test File
 
 ```scheme
-(mod test_addition
+(module test_addition
   (fn add_numbers ((a i32) (b i32)) -> i32
     (ret (call add a b)))
   

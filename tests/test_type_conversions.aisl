@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn i32_to_f32 x int -> float
     (ret (call cast_i32_f32 x)))
   

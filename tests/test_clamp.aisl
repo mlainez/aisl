@@ -1,0 +1,19 @@
+(module test_clamp
+  (fn clamp x int min_val int max_val int -> int
+    (set too_low bool (call lt x min_val))
+    (if too_low
+      (ret min_val))
+    (set too_high bool (call gt x max_val))
+    (if too_high
+      (ret max_val))
+    (ret x))
+  
+  (fn main -> int
+    (call print "Testing clamp:")
+    (set r1 int (call clamp 5 0 10))
+    (call print r1)
+    (set r2 int (call clamp -5 0 10))
+    (call print r2)
+    (set r3 int (call clamp 15 0 10))
+    (call print r3)
+    (ret 0)))

@@ -1,0 +1,11 @@
+(module test_inline_validation
+  (fn is_positive x int -> bool
+    (ret (call gt x 0)))
+  
+  (fn main -> int
+    (call print "Testing inline validation")
+    (set result bool (call is_positive 42))
+    (if result
+      (call print "PASS")
+      (call print "FAIL"))
+    (ret 0)))

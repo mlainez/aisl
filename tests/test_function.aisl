@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn add_two x int -> int
     (ret (call add x 2)))
   

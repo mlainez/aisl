@@ -1,4 +1,4 @@
-(mod test_basic
+(module test_basic
   (fn return_constant -> int
     (ret 42))
   

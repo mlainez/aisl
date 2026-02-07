@@ -1,4 +1,4 @@
-(mod test_json_http
+(module test_json_http
   (fn fetch_url url string -> string
     (ret (call http_get url)))
   

@@ -1,4 +1,4 @@
-(mod test_bool
+(module test_bool
   (fn return_true -> bool
     (ret 1))
   

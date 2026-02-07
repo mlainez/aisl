@@ -1,4 +1,4 @@
-(mod working_server
+(module working_server
   (fn handle_request request string -> string
     (if (call string_starts_with request "GET /hello.json ")
       (then

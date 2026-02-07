@@ -1,4 +1,4 @@
-(mod test_string_conversion
+(module test_string_conversion
   (fn i32_to_string x int -> string
     (ret (call string_from_i32 x)))
   

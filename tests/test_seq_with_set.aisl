@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn increment_and_return counter int -> int
     (set new_counter int (call add counter 1))
     (ret new_counter))

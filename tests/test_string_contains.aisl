@@ -1,4 +1,4 @@
-(mod test_string_contains
+(module test_string_contains
   (fn contains text string search string -> bool
     (ret (call string_contains text search)))
   

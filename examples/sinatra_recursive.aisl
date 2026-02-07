@@ -1,4 +1,4 @@
-(mod sinatra_recursive
+(module sinatra_recursive
   (fn handle_connection client_sock string -> int
     (call print "")
     (call print "=== NEW REQUEST ===")

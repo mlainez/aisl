@@ -1,4 +1,4 @@
-(mod test_loop
+(module test_loop
   (fn test_loop -> int
     (set count int 0)
     (loop

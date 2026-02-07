@@ -1,4 +1,4 @@
-(mod test_process
+(module test_process
   (fn create_args_array size int -> array
     (ret (call ArrayNew size)))
   

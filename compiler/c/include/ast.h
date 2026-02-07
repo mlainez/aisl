@@ -9,8 +9,8 @@
 // ============================================
 
 typedef enum {
-    TYPE_INT,           // Legacy int (maps to i64)
-    TYPE_FLOAT,         // Legacy float (maps to f64)
+    TYPE_INT,           // Always i64 - only integer type in AISL
+    TYPE_FLOAT,         // Always f64 - only float type in AISL
     TYPE_STRING,
     TYPE_BOOL,
     TYPE_UNIT,
@@ -27,25 +27,7 @@ typedef enum {
     TYPE_RESULT,
     TYPE_FUTURE,
     TYPE_CHANNEL,
-    
-    // v4.0 explicit integer types
-    TYPE_I8,
-    TYPE_I16,
-    TYPE_I32,
-    TYPE_I64,
-    TYPE_U8,
-    TYPE_U16,
-    TYPE_U32,
-    TYPE_U64,
-    
-    // v4.0 floating point types
-    TYPE_F32,
-    TYPE_F64,
-    
-    // v4.0 collection types
     TYPE_MAP,
-    
-    // v4.4 JSON type
     TYPE_JSON,
 } TypeKind;
 
@@ -375,8 +357,26 @@ struct DefList {
 // MODULE DEFINITION
 // ============================================
 
+// Import types
+typedef enum {
+    IMPORT_FULL,      // (import math) - all functions
+    IMPORT_SELECTIVE, // (import (math sqrt pow)) - specific functions
+    IMPORT_ALIASED    // (import (math :as m)) - with alias
+} ImportType;
+
+// Individual import statement
+typedef struct {
+    char* module_name;        // Module name as string (e.g. "math")
+    ImportType type;
+    char* alias;              // For IMPORT_ALIASED
+    char** functions;         // For IMPORT_SELECTIVE
+    int function_count;       // Number of functions in selective import
+} Import;
+
 typedef struct Module {
     char* name;
+    Import** imports;          // Array of import statements
+    int import_count;          // Number of imports
     DefList* definitions;
 } Module;
 
@@ -391,21 +391,14 @@ Type* type_unit();
 Type* type_function(TypeList* params, Type* ret);
 Type* type_channel(Type* element);
 Type* type_future(Type* element);
-
-// v4.0 explicit type constructors
-Type* type_i8();
-Type* type_i16();
-Type* type_i32();
-Type* type_i64();
-Type* type_u8();
-Type* type_u16();
-Type* type_u32();
-Type* type_u64();
-Type* type_f32();
-Type* type_f64();
+Type* type_float();
 Type* type_array(Type* element);
 Type* type_map(Type* key, Type* value);
 Type* type_json();
+
+// Internal aliases for backward compatibility
+Type* type_i64();  // Maps to TYPE_INT
+Type* type_f64();  // Maps to TYPE_FLOAT
 
 Expr* expr_lit_int(int64_t val);
 Expr* expr_lit_float(double val);

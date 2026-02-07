@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn eq_i64 a int b int -> bool
     (ret (call eq a b)))
   

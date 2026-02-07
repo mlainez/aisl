@@ -1,4 +1,4 @@
-(mod test_result_file_io
+(module test_result_file_io
   (fn safe_file_read path string -> int
     (set result string (call file_read_result path))
     (set success bool (call is_ok result))

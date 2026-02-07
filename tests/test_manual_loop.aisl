@@ -1,4 +1,4 @@
-(mod test_manual_loop
+(module test_manual_loop
   (fn sum_zero_to_nine -> int
     (ret 45))
   

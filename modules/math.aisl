@@ -1,0 +1,36 @@
+(module math
+  (fn abs x int -> int
+    (set is_neg bool (call lt x 0))
+    (if is_neg
+      (ret (call neg x)))
+    (ret x))
+  
+  (fn abs_float x float -> float
+    (set is_neg bool (call lt x 0.0))
+    (if is_neg
+      (ret (call neg x)))
+    (ret x))
+  
+  (fn min a int b int -> int
+    (set is_less bool (call lt a b))
+    (if is_less
+      (ret a))
+    (ret b))
+  
+  (fn max a int b int -> int
+    (set is_greater bool (call gt a b))
+    (if is_greater
+      (ret a))
+    (ret b))
+  
+  (fn min_float a float b float -> float
+    (set is_less bool (call lt a b))
+    (if is_less
+      (ret a))
+    (ret b))
+  
+  (fn max_float a float b float -> float
+    (set is_greater bool (call gt a b))
+    (if is_greater
+      (ret a))
+    (ret b)))

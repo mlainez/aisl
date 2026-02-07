@@ -1,4 +1,4 @@
-(mod test_gc
+(module test_gc
   (fn get_gc_stats -> array
     (ret (call gc_stats)))
   

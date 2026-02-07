@@ -1,4 +1,4 @@
-(mod test_result_unwrap_or
+(module test_result_unwrap_or
   (fn unwrap_or_with_ok value int default int -> int
     (set result string (call result_ok value))
     (set extracted int (call unwrap_or result default))

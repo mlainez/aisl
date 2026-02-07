@@ -1,4 +1,4 @@
-(mod simple_tests
+(module simple_tests
 
   (fn add a int b int -> int
     (ret (call add a b)))

@@ -1,0 +1,30 @@
+(module conversion
+  (fn bool_to_int b bool -> int
+    (if b
+      (ret 1))
+    (ret 0))
+  
+  (fn int_to_bool i int -> bool
+    (ret (call ne i 0)))
+  
+  (fn celsius_to_fahrenheit c float -> float
+    (set multiplied float (call mul c 1.8))
+    (ret (call add multiplied 32.0)))
+  
+  (fn fahrenheit_to_celsius f float -> float
+    (set subtracted float (call sub f 32.0))
+    (ret (call div subtracted 1.8)))
+  
+  (fn kilometers_to_miles km float -> float
+    (ret (call mul km 0.621371)))
+  
+  (fn miles_to_kilometers miles float -> float
+    (ret (call div miles 0.621371)))
+  
+  (fn degrees_to_radians deg float -> float
+    (set pi float 3.14159265359)
+    (ret (call div (call mul deg pi) 180.0)))
+  
+  (fn radians_to_degrees rad float -> float
+    (set pi float 3.14159265359)
+    (ret (call div (call mul rad 180.0) pi))))

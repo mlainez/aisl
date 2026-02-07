@@ -28,16 +28,6 @@ const char* type_to_string(Type* type) {
         case TYPE_STRING: return "string";
         case TYPE_BOOL: return "bool";
         case TYPE_UNIT: return "unit";
-        case TYPE_I8: return "i8";
-        case TYPE_I16: return "i16";
-        case TYPE_I32: return "i32";
-        case TYPE_I64: return "i64";
-        case TYPE_U8: return "u8";
-        case TYPE_U16: return "u16";
-        case TYPE_U32: return "u32";
-        case TYPE_U64: return "u64";
-        case TYPE_F32: return "f32";
-        case TYPE_F64: return "f64";
         case TYPE_ARRAY: return "array";
         case TYPE_MAP: return "map";
         case TYPE_JSON: return "json";
@@ -55,21 +45,8 @@ bool type_equal(Type* t1, Type* t2) {
 bool type_compatible(Type* t1, Type* t2) {
     if (!t1 || !t2) return false;
     
-    // Exact match
-    if (t1->kind == t2->kind) return true;
-    
-    // Legacy int/float compatibility
-    if ((t1->kind == TYPE_INT || t1->kind == TYPE_I64) && 
-        (t2->kind == TYPE_INT || t2->kind == TYPE_I64)) {
-        return true;
-    }
-    
-    if ((t1->kind == TYPE_FLOAT || t1->kind == TYPE_F64) && 
-        (t2->kind == TYPE_FLOAT || t2->kind == TYPE_F64)) {
-        return true;
-    }
-    
-    return false;
+    // Exact match required - no implicit conversions in AISL
+    return t1->kind == t2->kind;
 }
 
 // Type check an expression recursively

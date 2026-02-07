@@ -1,4 +1,4 @@
-(mod test_httpbin
+(module test_httpbin
   (fn fetch_json_endpoint url string -> string
     (ret (call http_get url)))
   

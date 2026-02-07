@@ -68,7 +68,6 @@ typedef enum {
     TOK_CONTINUE,
 
     // V3 Keywords
-    TOK_MOD,
     TOK_DEFS,
     TOK_FN,
     TOK_CALL,

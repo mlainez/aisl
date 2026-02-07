@@ -1,4 +1,4 @@
-(mod echo_server
+(module echo_server
   (fn handle_connection client_sock string -> int
     (set request string (call tcp_receive client_sock 4096))
     (set lines array (call string_split request "\n"))

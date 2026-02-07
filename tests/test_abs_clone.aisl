@@ -1,0 +1,14 @@
+(module test_abs_clone
+  (fn abs x int -> int
+    (set is_neg bool (call lt x 0))
+    (if is_neg
+      (ret (call neg x)))
+    (ret x))
+  
+  (fn main -> int
+    (call print "Testing abs clone:")
+    (set result1 int (call abs -5))
+    (call print result1)
+    (set result2 int (call abs 10))
+    (call print result2)
+    (ret 0)))

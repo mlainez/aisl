@@ -1,4 +1,4 @@
-(mod test_if_statement
+(module test_if_statement
   (fn test_if_true -> int
     (set result int 0)
     (if (call eq 1 1)

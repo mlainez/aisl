@@ -1,4 +1,4 @@
-(mod test_weather_api
+(module test_weather_api
   (fn fetch_weather url string -> string
     (ret (call http_get url)))
   

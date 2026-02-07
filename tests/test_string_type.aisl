@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn identity_str x string -> string
     (ret x))
   

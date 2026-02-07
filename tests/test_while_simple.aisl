@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn count_up_to limit int -> int
     (set counter int 0)
     (set counter int (call if_i32 (call lt counter limit) (call add counter 1) counter))

@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn map_ops_length -> int
     (ret (call map_length (call map_set (call map_set (call map_set (call map_new) "a" 100) "b" 200) "c" 300))))
   

@@ -1,4 +1,4 @@
-(mod test_json
+(module test_json
   (fn parse_and_get_name json_str string -> string
     (ret (call json_get (call json_parse json_str) "name")))
   

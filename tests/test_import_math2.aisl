@@ -1,0 +1,12 @@
+(module test_math_simple
+  (import math)
+  
+  (fn test_sqrt -> int
+    (ret (call cast_f64_i64 (call sqrt 16.0))))
+  
+  (fn main -> int
+    (set x int (call test_sqrt))
+    (call print x)
+    (ret 0))
+  
+  (meta-note "Tests math import with custom function"))

@@ -1,4 +1,4 @@
-(mod final_server
+(module final_server
   (fn handle_request request string -> string
     (if (call string_contains request "GET /hello.json")
       (then

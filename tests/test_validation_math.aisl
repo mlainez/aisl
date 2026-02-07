@@ -1,0 +1,23 @@
+(module test_validation_math
+  (import validation)
+  (import math_extended)
+  
+  (fn main -> int
+    (call print "Testing validation:")
+    (set in_range_result bool (call in_range 5 0 10))
+    (call print in_range_result)
+    
+    (set is_pos bool (call is_positive 10))
+    (call print is_pos)
+    
+    (call print "Testing math_extended:")
+    (set clamped int (call clamp -5 0 10))
+    (call print clamped)
+    
+    (set sign_val int (call sign -42))
+    (call print sign_val)
+    
+    (set even bool (call is_even 4))
+    (call print even)
+    
+    (ret 0)))

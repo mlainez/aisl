@@ -1,4 +1,4 @@
-(mod test_string_advanced
+(module test_string_advanced
   (fn split_csv text string delim string -> array
     (ret (call string_split text delim)))
   

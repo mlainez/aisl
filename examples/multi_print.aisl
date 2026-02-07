@@ -1,4 +1,4 @@
-(mod multi_print
+(module multi_print
   (fn main -> int
     (call print "Line 1\n")
     (call print "Line 2\n")

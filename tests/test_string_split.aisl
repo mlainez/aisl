@@ -1,4 +1,4 @@
-(mod test_string_split
+(module test_string_split
   (fn split input string delim string -> array
     (ret (call string_split input delim)))
   

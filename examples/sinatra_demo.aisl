@@ -1,4 +1,4 @@
-(mod sinatra_demo
+(module sinatra_demo
   (fn extract_path request string -> string
     (set lines array (call string_split request "\n"))
     (set line_count int (call array_length lines))

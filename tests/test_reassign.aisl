@@ -1,0 +1,10 @@
+(module test_reassign
+  (fn test_set_reassign x int -> int
+    (set x int (call add x 1))
+    (ret x))
+  
+  (fn main -> int
+    (call print "Testing reassignment:")
+    (set result int (call test_set_reassign 10))
+    (call print result)
+    (ret 0)))

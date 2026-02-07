@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn increment_five_times start int -> int
     (set i int start)
     (set i int (call add i 1))

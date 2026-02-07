@@ -156,7 +156,7 @@ Example:
 ## Module Structure
 
 ```lisp
-(mod module_name
+(module module_name
   (fn function1 ...)
   (fn function2 ...)
   ...)

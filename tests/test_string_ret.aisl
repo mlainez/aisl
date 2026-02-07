@@ -1,0 +1,14 @@
+(module test_string_ret
+  (fn test_ret_string x int -> string
+    (set is_neg bool (call lt x 0))
+    (if is_neg
+      (ret "negative"))
+    (ret "positive"))
+  
+  (fn main -> int
+    (call print "Testing string returns:")
+    (set r1 string (call test_ret_string -5))
+    (call print r1)
+    (set r2 string (call test_ret_string 10))
+    (call print r2)
+    (ret 0)))

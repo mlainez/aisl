@@ -1,4 +1,4 @@
-(mod test_file_io
+(module test_file_io
   (fn write_and_read_file filepath string -> string
     (set fd_write int (call io_file_open filepath 1))
     (call io_file_write fd_write "Hello from AISL!")

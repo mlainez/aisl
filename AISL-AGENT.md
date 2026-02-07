@@ -276,7 +276,7 @@ See AISL-CORE.md for full list of polymorphic operations.
 Agent constructs should be tested via the test framework:
 
 ```lisp
-(mod test_while
+(module test_while
   (fn count_to_n ((n i32)) -> i32
     (set i i32 0)
     (while (call lt i n)

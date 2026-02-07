@@ -1,4 +1,4 @@
-(mod simple_server
+(module simple_server
   (fn handle_connection client_sock string -> int
     (set response string "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK")
     (set sent int (call tcp_send client_sock response))

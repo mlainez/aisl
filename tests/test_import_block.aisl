@@ -1,0 +1,10 @@
+(module test_import_block
+  (import math)
+  
+  (fn main -> int
+    (set text string "hello")
+    (set len int (call string_length text))
+    (call print len)
+    (ret 0))
+  
+  (meta-note "Tests that string functions are blocked without string import"))

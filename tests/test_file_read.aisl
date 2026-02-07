@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn read_file filepath string mode int -> string
     (set fd int (call io_file_open filepath mode))
     (set content string (call io_file_read fd))

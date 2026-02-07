@@ -1,4 +1,4 @@
-(mod test_simple_break
+(module test_simple_break
   (fn test_simple -> int
     (set i int 0)
     (loop

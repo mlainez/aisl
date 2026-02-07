@@ -1,4 +1,4 @@
-(mod test_string_replace
+(module test_string_replace
   (fn replace text string old string new string -> string
     (ret (call string_replace text old new)))
   

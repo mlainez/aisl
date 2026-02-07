@@ -1,4 +1,4 @@
-(mod test_tcp
+(module test_tcp
   (fn connect_tcp host string port int -> string
     (ret (call tcp_connect host port)))
   

@@ -1,4 +1,4 @@
-(mod test_desugar_while
+(module test_desugar_while
   (fn count_to_five -> int
     (set n int 0)
     (while (call lt n 5)

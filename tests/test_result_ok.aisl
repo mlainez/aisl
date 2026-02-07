@@ -1,4 +1,4 @@
-(mod test_result_ok
+(module test_result_ok
   (fn create_ok_result value int -> int
     (set result string (call result_ok value))
     (set is_success bool (call is_ok result))

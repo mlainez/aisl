@@ -1,0 +1,21 @@
+(module test_http_module
+  (import http)
+  
+  (fn get_status_text status int -> string
+    (ret (call get_status_text status)))
+  
+  (test-spec get_status_text
+    (case "returns 200 OK for status 200"
+      (input 200)
+      (expect "200 OK"))
+    (case "returns 404 Not Found for status 404"
+      (input 404)
+      (expect "404 Not Found"))
+    (case "returns 500 Internal Server Error for status 500"
+      (input 500)
+      (expect "500 Internal Server Error"))
+    (case "returns Unknown Status for unrecognized status"
+      (input 999)
+      (expect "Unknown Status")))
+  
+  (meta-note "Tests HTTP status text mapping from status codes to human-readable strings"))

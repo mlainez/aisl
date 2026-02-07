@@ -1,4 +1,4 @@
-(mod math
+(module math
   (fn multiply_f64 a float b float -> float
     (ret (call mul a b)))
   

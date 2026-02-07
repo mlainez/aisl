@@ -72,7 +72,7 @@ Process:
 Examples:
 ```lisp
 ; ✅ CORRECT - Pure AISL converter script
-(mod convert_syntax
+(module convert_syntax
   (fn convert_file path string -> int
     (set content string (call file_read path))
     (set converted string (call regex_replace pattern content))
@@ -100,7 +100,7 @@ Every test file must include:
 
 **Example structure:**
 ```lisp
-(mod test_example
+(module test_example
   (fn add_numbers ((a i32) (b i32)) -> i32
     (ret (call add a b)))
   
@@ -212,7 +212,7 @@ This means:
 Every AISL program is a module with functions:
 
 ```lisp
-(mod module_name
+(module module_name
   (fn function_name param1 type1 param2 type2 -> return_type
     statements...)
   
@@ -227,7 +227,7 @@ Every AISL program is a module with functions:
 **Every AISL program must have a `main` function as its entry point:**
 
 ```lisp
-(mod my_program
+(module my_program
   (fn main -> int
     (call print "Hello, AISL!")
     (ret 0)))
@@ -593,7 +593,7 @@ Generate these - the compiler desugars them to Core:
 AISL has a built-in test framework. Add tests to verify behavior:
 
 ```lisp
-(mod my_module
+(module my_module
   (fn add_numbers x i32 y i32 -> i32
     (ret (call add x y)))
   
@@ -642,6 +642,24 @@ AISL has a built-in test framework. Add tests to verify behavior:
 ---
 
 ## Common Pitfalls for LLMs
+
+### ❌ Don't: Use old 'mod' keyword for modules
+
+```lisp
+(mod my_module    ; ERROR: 'mod' is no longer valid
+  (fn add x int y int -> int
+    (ret (call add x y))))
+```
+
+### ✅ Do: Use 'module' keyword
+
+```lisp
+(module my_module
+  (fn add x int y int -> int
+    (ret (call add x y))))
+```
+
+**Note**: The `mod` keyword was renamed to `module` to avoid conflict with the modulo operation `(call mod x y)`.
 
 ### ❌ Don't: Mix types implicitly
 
@@ -735,6 +753,76 @@ AISL has a built-in test framework. Add tests to verify behavior:
 
 **Reserved type keywords:** `int`, `float`, `string`, `bool`, `json`, `array`, `map`, `result`, `option`
 
+### ❌ Don't: Name modules with type keywords
+
+```lisp
+; ❌ WRONG - Module name conflicts with type
+(module json
+  (fn parse_json ...))    ; ERROR: 'json' is a type keyword
+
+; ❌ WRONG - These also fail
+(module array ...)           ; ERROR: array is a type
+(module map ...)             ; ERROR: map is a type
+(module string ...)          ; ERROR: string is a type
+```
+
+### ✅ Do: Use descriptive module names
+
+```lisp
+; ✅ CORRECT - Descriptive names
+(module json_utils
+  (fn parse_json ...))
+
+(module array_helpers ...)
+(module map_utils ...)
+(module string_utils ...)
+```
+
+**Why this matters**: The parser tokenizes type keywords specially (TOK_TYPE_JSON, etc.), so using them as module names causes confusing "Module '' not found" errors.
+
+### ❌ Don't: Return string literals directly from if statements
+
+```lisp
+(fn get_message flag bool -> string
+  (if flag
+    (ret "yes"))          ; ERROR: String return from if doesn't work
+  (ret "no"))
+```
+
+**Bug**: Returning string literals from inside `if` blocks doesn't work correctly. The function will always return the value after the if block, ignoring the conditional return.
+
+### ✅ Do: Use result variable pattern for string returns
+
+```lisp
+(fn get_message flag bool -> string
+  (set result string "no")
+  (if flag
+    (set result string "yes"))
+  (ret result))
+```
+
+**Note**: Returning integers from if blocks works fine - this bug only affects string literals.
+
+### ❌ Don't: Forget closing parenthesis on modules
+
+```lisp
+(module my_module
+  (fn func1 ...)
+  (fn func2 ...)
+  ; Missing closing ) here!
+```
+
+**Error message**: "Module '' not found in search paths" (confusing!)
+
+### ✅ Do: Always close module with )
+
+```lisp
+(module my_module
+  (fn func1 ...)
+  (fn func2 ...))
+; Closing paren here ^
+```
+
 ### ❌ Don't: Use multiple ret statements after labels
 
 ```lisp
@@ -819,7 +907,7 @@ AISL is designed for predictable performance:
 ## Example: Complete Web Server
 
 ```lisp
-(mod web_server
+(module web_server
   (fn handle_request client_socket string -> i32
     (set request string (call tcp_receive client_socket 4096))
     (set response string "HTTP/1.1 200 OK\r\n\r\nHello, World!")

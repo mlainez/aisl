@@ -1935,7 +1935,7 @@ int vm_run(VM* vm) {
             // ============================================
 
             // ============================================
-            // FLOAT (F64) ARITHMETIC (v6.0 - removed f32)
+            // FLOAT (F64) ARITHMETIC - AISL 'float' type
             // ============================================
 
             case OP_ADD_F64: {
@@ -2041,7 +2041,7 @@ int vm_run(VM* vm) {
             }
 
             // ============================================
-            // FLOAT (F64) COMPARISONS (v6.0 - removed f32)
+            // FLOAT (F64) COMPARISONS - AISL 'float' type
             // ============================================
 
             case OP_EQ_F64: {
@@ -2093,6 +2093,27 @@ int vm_run(VM* vm) {
                 Value b = pop(vm);
                 Value a = pop(vm);
                 Value result = {.type = VAL_BOOL, .data.bool_val = a.data.f64_val >= b.data.f64_val};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            // String comparison
+            case OP_EQ_STR: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                bool eq = strcmp(a.data.string_val, b.data.string_val) == 0;
+                Value result = {.type = VAL_BOOL, .data.bool_val = eq};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_NE_STR: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                bool ne = strcmp(a.data.string_val, b.data.string_val) != 0;
+                Value result = {.type = VAL_BOOL, .data.bool_val = ne};
                 push(vm, result);
                 vm->ip++;
                 break;
@@ -4518,6 +4539,12 @@ void vm_disassemble(BytecodeProgram* program) {
                 break;
             case OP_GTE_INT:
                 printf("GTE_INT\n");
+                break;
+            case OP_EQ_STR:
+                printf("EQ_STR\n");
+                break;
+            case OP_NE_STR:
+                printf("NE_STR\n");
                 break;
             case OP_AND:
                 printf("AND\n");

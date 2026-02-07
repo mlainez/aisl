@@ -1,0 +1,10 @@
+(module test_math_abs
+  (import math)
+  
+  (fn main -> int
+    (call print "Testing math.abs:")
+    (set result1 int (call abs -5))
+    (call print result1)
+    (set result2 int (call abs 10))
+    (call print result2)
+    (ret 0)))

@@ -48,45 +48,18 @@ Type* type_future(Type* element) {
     return t;
 }
 
-// v4.0 explicit type constructors
-Type* type_i8() {
-    return type_new(TYPE_I8);
+Type* type_float() {
+    return type_new(TYPE_FLOAT);
 }
 
-Type* type_i16() {
-    return type_new(TYPE_I16);
-}
-
-Type* type_i32() {
-    return type_new(TYPE_I32);
-}
-
+// Internal aliases - i64/f64 map to int/float
+// These exist for backward compatibility with parser/compiler
 Type* type_i64() {
-    return type_new(TYPE_I64);
-}
-
-Type* type_u8() {
-    return type_new(TYPE_U8);
-}
-
-Type* type_u16() {
-    return type_new(TYPE_U16);
-}
-
-Type* type_u32() {
-    return type_new(TYPE_U32);
-}
-
-Type* type_u64() {
-    return type_new(TYPE_U64);
-}
-
-Type* type_f32() {
-    return type_new(TYPE_F32);
+    return type_new(TYPE_INT);  // int is always i64
 }
 
 Type* type_f64() {
-    return type_new(TYPE_F64);
+    return type_new(TYPE_FLOAT);  // float is always f64
 }
 
 Type* type_array(Type* element) {

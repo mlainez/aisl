@@ -1,4 +1,4 @@
-(mod test_file_io_complete
+(module test_file_io_complete
   (fn open_file_for_write filepath string -> int
     (ret (call io_file_open filepath 1)))
   

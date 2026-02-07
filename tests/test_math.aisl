@@ -1,4 +1,4 @@
-(mod test_math
+(module test_math
   (fn sqrt_wrapper x float -> float
     (ret (call math_sqrt x)))
   
@@ -27,10 +27,10 @@
       (input 5.0 0.0)
       (expect 1.0)))
   
-  (fn abs_i32 x int -> int
-    (ret (call math_abs_i32 x)))
+  (fn abs_i64 x int -> int
+    (ret (call math_abs_i64 x)))
   
-  (test-spec abs_i32
+  (test-spec abs_i64
     (case "absolute of negative"
       (input -42)
       (expect 42))
@@ -41,10 +41,10 @@
       (input 0)
       (expect 0)))
   
-  (fn min_i32 a int b int -> int
-    (ret (call math_min_i32 a b)))
+  (fn min_i64 a int b int -> int
+    (ret (call math_min_i64 a b)))
   
-  (test-spec min_i32
+  (test-spec min_i64
     (case "first smaller"
       (input 10 20)
       (expect 10))
@@ -55,10 +55,10 @@
       (input 15 15)
       (expect 15)))
   
-  (fn max_i32 a int b int -> int
-    (ret (call math_max_i32 a b)))
+  (fn max_i64 a int b int -> int
+    (ret (call math_max_i64 a b)))
   
-  (test-spec max_i32
+  (test-spec max_i64
     (case "first larger"
       (input 20 10)
       (expect 20))

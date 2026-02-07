@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn multiply a int b int -> int
     (ret (call mul a b)))
   

@@ -1,4 +1,4 @@
-(mod sequential_server
+(module sequential_server
   (fn build_json_response -> string
     (ret "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 33\r\n\r\n{\"message\": \"Hello from AISL\"}"))
 

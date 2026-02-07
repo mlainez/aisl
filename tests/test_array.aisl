@@ -1,4 +1,4 @@
-(mod test_array
+(module test_array
   (fn json_array_push_length val int -> int
     (ret (call json_length (call json_push (call json_new_array) val))))
   

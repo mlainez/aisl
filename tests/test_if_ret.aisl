@@ -1,0 +1,14 @@
+(module test_if_ret
+  (fn test_if_return x int -> string
+    (set is_100 bool (call eq x 100))
+    (if is_100
+      (ret "one hundred"))
+    (ret "not one hundred"))
+  
+  (fn main -> int
+    (call print "Testing if with ret:")
+    (set result string (call test_if_return 100))
+    (call print result)
+    (set result2 string (call test_if_return 99))
+    (call print result2)
+    (ret 0)))

@@ -57,6 +57,10 @@ typedef enum {
     OP_LE_FLOAT,
     OP_GE_FLOAT,
 
+    // Comparison - string
+    OP_EQ_STR,
+    OP_NE_STR,
+
     // Logical
     OP_AND_BOOL,
     OP_OR_BOOL,
@@ -130,7 +134,7 @@ typedef enum {
     OP_JSON_HAS,          // Check if JSON object has key: json key -> bool
     OP_JSON_DELETE,       // Delete key from JSON object: json key -> json
     OP_JSON_PUSH,         // Push value to JSON array: json value -> json
-    OP_JSON_LENGTH,       // Get length of JSON array or object: json -> i32
+    OP_JSON_LENGTH,       // Get length of JSON array or object: json -> int
     OP_JSON_TYPE,         // Get type of JSON value: json -> string ("object", "array", "string", "number", "bool", "null")
 
     // Result Type Operations
@@ -140,7 +144,7 @@ typedef enum {
     OP_RESULT_IS_ERR,     // Check if result is Err: result -> bool
     OP_RESULT_UNWRAP,     // Extract value from Ok (panics on Err): result -> value
     OP_RESULT_UNWRAP_OR,  // Extract value or return default: result default -> value
-    OP_RESULT_ERROR_CODE, // Get error code from Err: result -> i32
+    OP_RESULT_ERROR_CODE, // Get error code from Err: result -> int
     OP_RESULT_ERROR_MSG,  // Get error message from Err: result -> string
 
     // File System Operations (Result variants)
@@ -154,7 +158,7 @@ typedef enum {
     OP_HTTP_PUT,          // HTTP PUT request: url body -> response
     OP_HTTP_DELETE,       // HTTP DELETE request: url -> response
     OP_HTTP_REQUEST,      // Generic HTTP request: method url headers body -> response
-    OP_HTTP_GET_STATUS,   // Get HTTP response status code: response -> i32
+    OP_HTTP_GET_STATUS,   // Get HTTP response status code: response -> int
     OP_HTTP_GET_BODY,     // Get HTTP response body: response -> string
     OP_HTTP_GET_HEADER,   // Get HTTP response header: response key -> string
     OP_HTTP_SET_HEADER,   // Set HTTP request header: method url key value -> response
@@ -212,8 +216,8 @@ typedef enum {
 
     // Process Operations
     OP_PROCESS_SPAWN,     // Spawn process: command args -> process
-    OP_PROCESS_EXEC,      // Execute and wait: command args -> i32
-    OP_PROCESS_WAIT,      // Wait for process: process -> i32
+    OP_PROCESS_EXEC,      // Execute and wait: command args -> int
+    OP_PROCESS_WAIT,      // Wait for process: process -> int
     OP_PROCESS_KILL,      // Kill process: process signal -> bool
     OP_PROCESS_PIPE,      // Create pipe: -> [read_fd, write_fd]
     OP_PROCESS_READ,      // Read from process stdout: process -> string
@@ -223,12 +227,12 @@ typedef enum {
     OP_TCP_LISTEN,        // Listen on port: port -> socket
     OP_TCP_ACCEPT,        // Accept connection: socket -> socket
     OP_TCP_CONNECT,       // Connect to host:port: host port -> socket
-    OP_TCP_SEND,          // Send data: socket data -> i32
+    OP_TCP_SEND,          // Send data: socket data -> int
     OP_TCP_RECEIVE,       // Receive data: socket max_bytes -> string
     OP_TCP_CLOSE,         // Close socket: socket -> unit
     OP_UDP_SOCKET,        // Create UDP socket: -> socket
     OP_UDP_BIND,          // Bind UDP socket: socket port -> bool
-    OP_UDP_SEND_TO,       // Send to address: socket data host port -> i32
+    OP_UDP_SEND_TO,       // Send to address: socket data host port -> int
     OP_UDP_RECEIVE_FROM,  // Receive from: socket max_bytes -> [data, host, port]
 
     // Async/Await Operations
@@ -309,7 +313,7 @@ typedef struct {
     union {
         int64_t int_val;
         uint32_t uint_val;
-        double float_val;    // For f32 and f64 constants
+        double float_val;    // For float (f64) constants
         char* string_val;
         bool bool_val;
         struct {

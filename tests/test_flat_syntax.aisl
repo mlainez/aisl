@@ -1,4 +1,4 @@
-(mod test_flat_syntax
+(module test_flat_syntax
   (fn add_two a int b int -> int
     (ret (call add a b)))
   

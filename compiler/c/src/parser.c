@@ -359,7 +359,7 @@ static Expr* parser_parse_value_expr_v3(Parser* parser) {
         Token inner = parser->current;
         
         if (inner.kind == TOK_LIT_INT) {
-            // Typed integer literal: (int i32 42)
+            // Typed integer literal: (int int 42) - but type is optional in AISL
             parser_advance(parser); // consume 'int'
             Type* lit_type = parser_parse_type(parser); // parse type
             int64_t val = parser->current.value.int_val;
@@ -532,7 +532,7 @@ static Expr* parser_parse_statements_v3(Parser* parser) {
 
             // Attach the explicit type annotation to the value expression
             // This ensures the compiler can track variable types
-            // Always use the explicit annotation (e.g., i32) instead of generic types (e.g., TYPE_INT)
+            // Always use the explicit annotation (int/float) with TYPE_INT/TYPE_FLOAT internally
             value->type = var_type;
 
             // For now, just represent as an apply to a setter
@@ -1038,23 +1038,121 @@ static Definition* parser_parse_meta_note(Parser* parser) {
     return def;
 }
 
+// Helper to check if a token can be used as a module name
+// Allows identifiers and type keywords (string, array, map, json)
+static bool is_valid_module_name_token(TokenKind kind) {
+    return kind == TOK_IDENTIFIER ||
+           kind == TOK_TYPE_STRING ||
+           kind == TOK_TYPE_ARRAY ||
+           kind == TOK_TYPE_MAP ||
+           kind == TOK_TYPE_JSON;
+}
+
+// Parse import statement
+// Syntax: (import module-name)
+//     or: (import (module-name func1 func2 ...))
+//     or: (import (module-name :as alias))
+Import* parser_parse_import(Parser* parser) {
+    parser_expect(parser, TOK_LPAREN);
+    parser_expect(parser, TOK_IMPORT);
+    
+    Import* import = malloc(sizeof(Import));
+    import->alias = NULL;
+    import->functions = NULL;
+    import->function_count = 0;
+    
+    // Check for simple vs. selective/aliased import
+    if (parser->current.kind == TOK_LPAREN) {
+        // Selective or aliased: (import (module-name ...))
+        parser_advance(parser);
+        
+        if (!is_valid_module_name_token(parser->current.kind)) {
+            parser_error(parser, "Expected module name");
+            free(import);
+            return NULL;
+        }
+        
+        import->module_name = strdup(parser->current.value.string_val);
+        parser_advance(parser);
+        
+        // Check for :as (aliased import)
+        if (parser->current.kind == TOK_COLON) {
+            parser_advance(parser);
+            if (parser->current.kind != TOK_IDENTIFIER || 
+                strcmp(parser->current.value.string_val, "as") != 0) {
+                parser_error(parser, "Expected 'as' after ':'");
+                free(import);
+                return NULL;
+            }
+            parser_advance(parser);
+            
+            if (parser->current.kind != TOK_IDENTIFIER) {
+                parser_error(parser, "Expected alias name");
+                free(import);
+                return NULL;
+            }
+            
+            import->type = IMPORT_ALIASED;
+            import->alias = strdup(parser->current.value.string_val);
+            parser_advance(parser);
+        } else {
+            // Selective import: collect function names
+            import->type = IMPORT_SELECTIVE;
+            int capacity = 10;
+            import->functions = malloc(sizeof(char*) * capacity);
+            
+            while (parser->current.kind == TOK_IDENTIFIER) {
+                if (import->function_count >= capacity) {
+                    capacity *= 2;
+                    import->functions = realloc(import->functions, sizeof(char*) * capacity);
+                }
+                import->functions[import->function_count++] = 
+                    strdup(parser->current.value.string_val);
+                parser_advance(parser);
+            }
+        }
+        
+        parser_expect(parser, TOK_RPAREN);
+    } else {
+        // Simple full import: (import module-name)
+        if (!is_valid_module_name_token(parser->current.kind)) {
+            parser_error(parser, "Expected module name");
+            free(import);
+            return NULL;
+        }
+        
+        import->module_name = strdup(parser->current.value.string_val);
+        import->type = IMPORT_FULL;
+        parser_advance(parser);
+    }
+    
+    parser_expect(parser, TOK_RPAREN);
+    return import;
+}
+
 Module* parser_parse_module(Parser* parser) {
     parser_expect(parser, TOK_LPAREN);
 
     char* name = NULL;
     DefList* defs = NULL;
+    Import** imports = NULL;
+    int import_count = 0;
 
-    // Check which syntax version
+    // Check which syntax version  
     if (parser->current.kind == TOK_MODULE) {
-        // Old v0.2 syntax: (Module name [] [] [...defs...])
+        // Could be old v0.2 syntax: (Module name [] [] [...defs...])
+        // Or new v3.0 syntax: (module name (import ...)* (fn ...)* ...)
         parser_advance(parser);
 
         name = strdup(parser->current.value.string_val);
         parser_advance(parser);
-
-        // Skip empty list []
-        parser_expect(parser, TOK_LBRACKET);
-        parser_expect(parser, TOK_RBRACKET);
+        
+        // Check if old syntax (starts with [) or new syntax (starts with ()
+        if (parser->current.kind == TOK_LBRACKET) {
+            // Old v0.2 syntax with square brackets
+            // Skip empty list []
+            parser_expect(parser, TOK_LBRACKET);
+            parser_expect(parser, TOK_RBRACKET);
 
         // Skip empty list [] (exports)
         parser_expect(parser, TOK_LBRACKET);
@@ -1111,55 +1209,72 @@ Module* parser_parse_module(Parser* parser) {
         parser_expect(parser, TOK_RBRACKET);
 
         parser_expect(parser, TOK_RPAREN);
-
-    } else if (parser->current.kind == TOK_MOD) {
-        // New v3.0 syntax: (mod name (fn ...)* (test-spec ...)* (property-spec ...)* (meta-note ...)*)
-        parser_advance(parser);
-
-        name = strdup(parser->current.value.string_val);
-        parser_advance(parser);
-
-        while (parser->current.kind == TOK_LPAREN) {
-            Definition* def = NULL;
+        
+        } else {
+            // New v3.0 syntax: (module name (import ...)* (fn ...)* (test-spec ...)* (property-spec ...)* (meta-note ...)*)
+            // name already parsed above
             
-            if (parser->peek_tok.kind == TOK_FN) {
-                def = parser_parse_function_v3(parser);
-            } else if (parser->peek_tok.kind == TOK_TEST_SPEC) {
-                def = parser_parse_test_spec(parser);
-            } else if (parser->peek_tok.kind == TOK_PROPERTY_SPEC) {
-                def = parser_parse_property_spec(parser);
-            } else if (parser->peek_tok.kind == TOK_META_NOTE) {
-                def = parser_parse_meta_note(parser);
-            } else {
-                // Unknown definition, skip it
-                int depth = 1;
-                parser_advance(parser);
-                while (depth > 0 && parser->current.kind != TOK_EOF) {
-                    if (parser->current.kind == TOK_LPAREN) depth++;
-                    else if (parser->current.kind == TOK_RPAREN) depth--;
-                    if (depth > 0) parser_advance(parser);
+            // Parse imports (if any)
+            int import_capacity = 0;
+            
+            while (parser->current.kind == TOK_LPAREN && parser->peek_tok.kind == TOK_IMPORT) {
+                Import* import = parser_parse_import(parser);
+                if (import) {
+                    if (import_count >= import_capacity) {
+                        import_capacity = (import_capacity == 0) ? 4 : import_capacity * 2;
+                        imports = realloc(imports, sizeof(Import*) * import_capacity);
+                    }
+                    imports[import_count++] = import;
                 }
-                if (depth > 0) break;
-                parser_advance(parser);
-                continue;
             }
-            
-            if (!def) break;
-            DefList* new_list = malloc(sizeof(DefList));
-            new_list->def = def;
-            new_list->next = defs;
-            defs = new_list;
+
+            while (parser->current.kind == TOK_LPAREN) {
+                Definition* def = NULL;
+                
+                if (parser->peek_tok.kind == TOK_FN) {
+                    def = parser_parse_function_v3(parser);
+                } else if (parser->peek_tok.kind == TOK_TEST_SPEC) {
+                    def = parser_parse_test_spec(parser);
+                } else if (parser->peek_tok.kind == TOK_PROPERTY_SPEC) {
+                    def = parser_parse_property_spec(parser);
+                } else if (parser->peek_tok.kind == TOK_META_NOTE) {
+                    def = parser_parse_meta_note(parser);
+                } else {
+                    // Unknown definition, skip it
+                    int depth = 1;
+                    parser_advance(parser);
+                    while (depth > 0 && parser->current.kind != TOK_EOF) {
+                        if (parser->current.kind == TOK_LPAREN) depth++;
+                        else if (parser->current.kind == TOK_RPAREN) depth--;
+                        if (depth > 0) parser_advance(parser);
+                    }
+                    if (depth > 0) break;
+                    parser_advance(parser);
+                    continue;
+                }
+                
+                if (!def) break;
+                DefList* new_list = malloc(sizeof(DefList));
+                new_list->def = def;
+                new_list->next = defs;
+                defs = new_list;
+            }
+
+            parser_expect(parser, TOK_RPAREN);
         }
 
-        parser_expect(parser, TOK_RPAREN);
-
     } else {
-        parser_error(parser, "Expected 'Module' or 'mod'");
+        parser_error(parser, "Expected 'module'");
     }
 
+    // Create module with imports and registry
     Module* mod = malloc(sizeof(Module));
     mod->name = name;
     mod->definitions = defs;
+    mod->imports = imports;
+    mod->import_count = import_count;
+    
+    // Module registry no longer needed - imports resolved at compile time
 
     return mod;
 }

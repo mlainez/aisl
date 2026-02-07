@@ -1,4 +1,4 @@
-(mod test_polymorphic_ops
+(module test_polymorphic_ops
   (fn test_print x int y int z string b bool -> int
     (call print x)
     (call print y)

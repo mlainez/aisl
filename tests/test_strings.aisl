@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn strlen s string -> int
     (ret (call len s)))
   

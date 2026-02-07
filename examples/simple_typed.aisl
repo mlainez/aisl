@@ -1,4 +1,4 @@
-(mod hello
+(module hello
   (fn main -> int
     (call print 42)
     (ret 0)))

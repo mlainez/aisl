@@ -1,0 +1,26 @@
+(module test_math_import
+  (import math)
+  
+  (fn test_abs_positive x int -> int
+    (ret (call abs x)))
+  
+  (test-spec test_abs_positive
+    (case "abs of positive number"
+      (input 42)
+      (expect 42))
+    (case "abs of negative number"
+      (input -42)
+      (expect 42)))
+  
+  (fn test_min_ints a int b int -> int
+    (ret (call min a b)))
+  
+  (test-spec test_min_ints
+    (case "min of 5 and 10"
+      (input 5 10)
+      (expect 5))
+    (case "min of 10 and 5"
+      (input 10 5)
+      (expect 5)))
+  
+  (meta-note "Tests importing and using math module functions"))

@@ -1,0 +1,25 @@
+(module test_json_type
+  (fn main -> int
+    (call print "Testing JSON type detection:")
+    
+    (set obj json (call json_new_object))
+    (call print "Created object")
+    
+    (set type_str string (call json_type obj))
+    (call print "Type string:")
+    (call print type_str)
+    
+    (set check bool (call string_eq type_str "object"))
+    (call print "String comparison result:")
+    (call print check)
+    
+    (set arr json (call json_new_array))
+    (set arr_type string (call json_type arr))
+    (call print "Array type:")
+    (call print arr_type)
+    
+    (set arr_check bool (call string_eq arr_type "array"))
+    (call print "Array check:")
+    (call print arr_check)
+    
+    (ret 0)))

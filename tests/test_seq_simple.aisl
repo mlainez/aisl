@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn return_last_of_three a int b int c int -> int
     (ret c))
   

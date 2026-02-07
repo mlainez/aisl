@@ -1,4 +1,4 @@
-(mod test
+(module test
   (fn get_first size int val1 int val2 int -> int
     (ret (call array_get (call array_push (call array_push (call array_new size) val1) val2) 0)))
   

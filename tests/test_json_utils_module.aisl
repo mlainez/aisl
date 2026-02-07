@@ -1,0 +1,37 @@
+(module test_json_utils_module
+  (import json_utils)
+  
+  (fn test_is_object data json -> bool
+    (ret (call is_object data)))
+  
+  (fn test_is_array data json -> bool
+    (ret (call is_array data)))
+  
+  (fn test_get_length data json -> int
+    (ret (call get_length data)))
+  
+  (test-spec test_is_object
+    (case "returns true for empty object"
+      (input (call json_new_object))
+      (expect true))
+    (case "returns false for array"
+      (input (call json_new_array))
+      (expect false)))
+  
+  (test-spec test_is_array
+    (case "returns true for empty array"
+      (input (call json_new_array))
+      (expect true))
+    (case "returns false for object"
+      (input (call json_new_object))
+      (expect false)))
+  
+  (test-spec test_get_length
+    (case "returns 0 for empty object"
+      (input (call json_new_object))
+      (expect 0))
+    (case "returns 0 for empty array"
+      (input (call json_new_array))
+      (expect 0)))
+  
+  (meta-note "Tests JSON type detection and length operations on empty JSON objects and arrays"))

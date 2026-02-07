@@ -1,4 +1,4 @@
-(mod demo
+(module demo
   (fn find_max_of_five v1 int v2 int v3 int v4 int v5 int -> int
     (set max int v1)
     (set max int (call if_i32 (call gt v2 max) v2 max))

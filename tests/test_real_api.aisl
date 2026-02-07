@@ -1,4 +1,4 @@
-(mod test_real_api
+(module test_real_api
   (fn fetch_github_api url string -> string
     (ret (call http_get url)))
   
