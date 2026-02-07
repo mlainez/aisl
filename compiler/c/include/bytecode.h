@@ -262,6 +262,12 @@ typedef enum {
     OP_PRINT_ARRAY,   // Print array (for debugging)
     OP_PRINT_MAP,     // Print map (for debugging)
 
+    // FFI (Foreign Function Interface) Operations
+    OP_FFI_LOAD,      // Load native library: library_name -> handle (0 on failure)
+    OP_FFI_CALL,      // Call C function: handle func_name arg1 arg2 ... argN arg_count -> result
+    OP_FFI_AVAILABLE, // Check if library is available: library_name -> bool
+    OP_FFI_CLOSE,     // Close library: handle -> unit
+
     // Legacy compatibility aliases (v6.0 - map old names to new simplified names)
     OP_ADD_I64 = OP_ADD_INT,
     OP_SUB_I64 = OP_SUB_INT,

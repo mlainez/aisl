@@ -1,0 +1,384 @@
+# AISL VM Refactoring Plan: Extract All Extensions
+# Last Updated: 2026-02-07
+# Status: Planning Phase
+
+## Current State Analysis
+
+### VM Bloat Statistics
+- **Total opcodes**: 232
+- **Extension opcodes**: 48 (21% of total)
+- **Implemented in VM**: 45 operations across 8 domains
+- **Estimated LOC**: ~2000+ lines of extension code in vm.c
+
+### Domains to Extract
+1. **HTTP** (6 ops): GET, POST, PUT, DELETE, status, body
+2. **Regex** (5 ops): compile, match, find, find_all, replace  
+3. **WebSocket** (4 ops): connect, send, receive, close
+4. **Crypto** (3 ops): SHA256, MD5, HMAC
+5. **SQLite** (10 ops): open, close, exec, query, prepare, bind, step, column, reset, finalize
+6. **Process** (7 ops): spawn, exec, wait, kill, pipe, read, write
+7. **TCP** (6 ops): listen, accept, connect, send, receive, close
+8. **UDP** (4 ops): socket, bind, send_to, receive_from
+
+### Dependencies to Remove from VM
+- libcurl (HTTP)
+- OpenSSL (HTTP, Crypto, WebSocket)
+- regex.h (Regex)
+- sqlite3 (SQLite)
+- sys/socket.h (TCP, UDP, WebSocket)
+- unistd.h/fork (Process)
+
+## Refactoring Strategy
+
+### Phase 1: Implement FFI System ✓ (Design Complete)
+See `.aisl.ffi-design` for full specification.
+
+**Core FFI Operations:**
+- `ffi_load(library_name)` → handle
+- `ffi_call(handle, function_name, args...)` → value
+- `ffi_available(library_name)` → bool
+- `ffi_close(handle)` → void
+
+### Phase 2: Create Extension Framework
+
+**Directory Structure:**
+```
+extensions/
+  _template/          # Template for new extensions
+    extension.c
+    extension.h
+    Makefile
+    README.md
+  http/
+    http.c
+    http.h
+    Makefile
+  regex/
+    regex.c
+    ...
+  (same for all 8 domains)
+```
+
+**Extension Skeleton:**
+```c
+// extensions/http/http.c
+#include <stdint.h>
+#include <curl/curl.h>
+
+// Init function (called on library load)
+int aisl_extension_init(void) {
+    curl_global_init(CURL_GLOBAL_ALL);
+    return 0;
+}
+
+// Cleanup function (called on library unload)
+void aisl_extension_cleanup(void) {
+    curl_global_cleanup();
+}
+
+// FFI-callable function
+char* http_get_aisl(const char* url) {
+    // Implementation extracted from VM
+    ...
+}
+```
+
+### Phase 3: Extract Extensions (Priority Order)
+
+#### 3.1 HTTP (PRIORITY 1 - Most Complex)
+**Why first**: Complex, self-contained, good test case for FFI
+
+**C API:**
+```c
+char* http_get_aisl(const char* url);
+char* http_post_aisl(const char* url, const char* body);
+char* http_put_aisl(const char* url, const char* body);
+char* http_delete_aisl(const char* url);
+int64_t http_get_status_aisl(const char* response);
+char* http_get_body_aisl(const char* response);
+```
+
+**Pure AISL Fallback:**
+```lisp
+(module http_pure
+  (fn http_get_pure url string -> string
+    ; Implement basic HTTP using TCP sockets
+    ; Parse HTTP/1.1 response manually
+    (ret "HTTP/1.1 501 Not Implemented\r\n\r\n")))
+```
+
+#### 3.2 Regex (PRIORITY 2 - Simple, Useful)
+**Why second**: Simple API, widely used
+
+**C API:**
+```c
+void* regex_compile_aisl(const char* pattern);
+int regex_match_aisl(void* regex_handle, const char* text);
+char* regex_find_aisl(void* regex_handle, const char* text);
+char** regex_find_all_aisl(void* regex_handle, const char* text, int64_t* count);
+char* regex_replace_aisl(void* regex_handle, const char* text, const char* replacement);
+void regex_free_aisl(void* regex_handle);
+```
+
+**Pure AISL Fallback:**
+```lisp
+(module regex_pure
+  ; Simple pattern matching without full regex
+  (fn regex_match_pure pattern string text string -> bool
+    (ret (call string_contains text pattern))))
+```
+
+#### 3.3 Crypto (PRIORITY 3 - Self-Contained)
+**Why third**: No state, pure functions
+
+**C API:**
+```c
+char* crypto_sha256_aisl(const char* data);
+char* crypto_md5_aisl(const char* data);
+char* crypto_hmac_sha256_aisl(const char* key, const char* message);
+```
+
+**Pure AISL Fallback:**
+```lisp
+(module crypto_pure
+  ; Implement SHA256 in pure AISL (slow but works)
+  (fn sha256_pure data string -> string
+    ; Reference implementation from RFC 6234
+    (ret "not_implemented")))
+```
+
+#### 3.4 WebSocket (PRIORITY 4 - Depends on HTTP)
+Depends on HTTP extension for handshake.
+
+#### 3.5 TCP/UDP (PRIORITY 5 - Low-Level)
+Core network primitives - may keep in VM or extract.
+
+#### 3.6 SQLite (PRIORITY 6 - Complex State)
+10 operations with complex state management.
+
+#### 3.7 Process (PRIORITY 7 - OS-Specific)
+Platform-specific, security-sensitive.
+
+### Phase 4: Build System Updates
+
+**Main Makefile:**
+```makefile
+# Build VM without extensions
+vm:
+	$(MAKE) -C compiler/c
+
+# Build all extensions (with dependency checks)
+extensions:
+	@echo "Building AISL extensions..."
+	@for ext in http regex crypto websocket tcp sqlite process; do \
+		if $(MAKE) -C extensions/$$ext check-deps 2>/dev/null; then \
+			$(MAKE) -C extensions/$$ext || exit 1; \
+			echo "✓ $$ext extension built"; \
+		else \
+			echo "✗ $$ext extension skipped (missing dependencies)"; \
+		fi \
+	done
+
+# Build everything
+all: vm extensions
+
+# Install extensions to system
+install-extensions:
+	@for ext in extensions/*/lib*.so; do \
+		install -D $$ext $(DESTDIR)/usr/lib/aisl/extensions/; \
+	done
+```
+
+**Extension Makefile Template:**
+```makefile
+# extensions/http/Makefile
+CC = gcc
+CFLAGS = -Wall -Wextra -fPIC -O2 -I../../compiler/c/include
+LDFLAGS = -shared
+
+# Dependencies
+LIBS = -lcurl -lssl -lcrypto
+
+# Check if dependencies are available
+check-deps:
+	@pkg-config --exists libcurl || exit 1
+	@pkg-config --exists openssl || exit 1
+
+lib aisl_http.so: http.c http.h
+	$(CC) $(CFLAGS) $(LDFLAGS) $(LIBS) -o $@ http.c
+
+clean:
+	rm -f libaisl_http.so
+```
+
+### Phase 5: Module Updates
+
+**Pattern: Automatic Fallback**
+```lisp
+(module http
+  ; Try native extension first
+  (set native_lib handle (call ffi_load "libaisl_http"))
+  (set has_native bool (call ne native_lib 0))
+  
+  ; Fallback to pure AISL if native unavailable
+  (set pure_lib handle 0)
+  (if (call eq has_native false)
+    (call print "Warning: Native HTTP extension not available, using pure AISL fallback (slower)"))
+  
+  ; Public API with automatic fallback
+  (fn get url string -> string
+    (if has_native
+      (ret (call ffi_call native_lib "http_get_aisl" url)))
+    ; Fallback to pure AISL
+    (ret (call http_get_pure url)))
+  
+  ; Pure AISL implementations (imported from http_pure.aisl)
+  (import http_pure))
+```
+
+### Phase 6: Remove Old Opcodes
+
+**Opcodes to Remove (45 total):**
+- OP_HTTP_* (6)
+- OP_REGEX_* (5)
+- OP_WS_* (4)
+- OP_CRYPTO_* (3)
+- OP_SQLITE_* (10)
+- OP_PROCESS_* (7)
+- OP_TCP_* (6)
+- OP_UDP_* (4)
+
+**VM Size Reduction Estimate:**
+- Current vm.c: 4636 lines
+- Extension code: ~2000 lines
+- After refactoring: ~2600 lines (**44% reduction**)
+
+**Bytecode.h Cleanup:**
+- Current: 232 opcodes
+- After refactoring: ~187 opcodes (20% reduction)
+
+### Phase 7: Documentation Updates
+
+**New Documentation:**
+1. `docs/FFI.md` - FFI system guide
+2. `docs/EXTENSIONS.md` - Writing extensions guide
+3. `docs/PURE_AISL.md` - Pure AISL fallback patterns
+4. Update `AGENTS.md` - FFI patterns for LLMs
+5. Update `.aisl.grammar` - Add FFI syntax
+
+**LLM Training Examples:**
+```lisp
+; Example: Using HTTP with automatic fallback
+(module my_app
+  (import http)
+  
+  (fn fetch_data -> string
+    (set response string (call http.get "https://api.example.com/data"))
+    (ret response)))
+```
+
+## Implementation Timeline
+
+### Week 1: FFI Core
+- [ ] Implement OP_FFI_LOAD, OP_FFI_CALL, OP_FFI_AVAILABLE
+- [ ] Add FFI tests
+- [ ] Test FFI with simple extension (hello world)
+
+### Week 2: HTTP Extension
+- [ ] Extract HTTP code from VM to extensions/http/
+- [ ] Build libaisl_http.so
+- [ ] Write http_pure.aisl fallback
+- [ ] Update modules/http.aisl to use FFI
+- [ ] Test: All HTTP tests pass
+
+### Week 3: Regex + Crypto Extensions
+- [ ] Extract regex code to extensions/regex/
+- [ ] Write regex_pure.aisl fallback
+- [ ] Extract crypto code to extensions/crypto/
+- [ ] Write crypto_pure.aisl fallback
+- [ ] Update modules
+
+### Week 4: WebSocket + TCP/UDP
+- [ ] Extract websocket to extensions/websocket/
+- [ ] Extract TCP/UDP to extensions/network/
+- [ ] Update modules
+
+### Week 5: SQLite + Process
+- [ ] Extract SQLite to extensions/sqlite/
+- [ ] Extract process to extensions/process/
+- [ ] Update modules
+
+### Week 6: Cleanup + Documentation
+- [ ] Remove all deprecated opcodes from VM
+- [ ] Remove extension code from vm.c
+- [ ] Remove library dependencies from VM Makefile
+- [ ] Update all documentation
+- [ ] Version bump to 2.0.0
+
+## Testing Strategy
+
+### Test Categories
+1. **FFI System Tests**: Load libraries, call functions, type marshalling
+2. **Extension Tests**: Each extension works independently
+3. **Fallback Tests**: Pure AISL works when native unavailable
+4. **Integration Tests**: Modules use FFI correctly
+5. **Regression Tests**: All 132 existing tests still pass
+
+### Test Commands
+```bash
+# Test FFI system
+./bin/aislc tests/test_ffi_load.aisl
+./bin/aislc tests/test_ffi_call.aisl
+./bin/aislc tests/test_ffi_types.aisl
+
+# Test extensions
+./bin/aislc tests/test_http_extension.aisl
+./bin/aislc tests/test_regex_extension.aisl
+
+# Test fallbacks (without native libs)
+LD_LIBRARY_PATH= ./bin/aislc tests/test_http_pure.aisl
+
+# Test integration
+./bin/aislc tests/test_working_modules.aisl
+
+# Full regression
+make test
+```
+
+## Success Criteria
+
+1. ✓ FFI system works: Can load .so files and call C functions
+2. ✓ All 8 extensions built and functional
+3. ✓ Pure AISL fallbacks work for all extensions
+4. ✓ All 132+ existing tests pass
+5. ✓ VM size reduced by 40%+
+6. ✓ No hard dependencies (curl, sqlite, etc.) in VM
+7. ✓ Documentation complete for LLM code generation
+
+## Risks and Mitigation
+
+### Risk 1: FFI Performance Overhead
+**Mitigation**: Benchmark FFI vs native opcodes. If >10% slower, optimize.
+
+### Risk 2: Pure AISL Too Slow
+**Mitigation**: Pure AISL is fallback only. Native extensions are default.
+
+### Risk 3: Breaking Changes
+**Mitigation**: Deprecation period. Keep old opcodes for 1-2 releases.
+
+### Risk 4: Extension Build Failures
+**Mitigation**: Graceful degradation. VM works without extensions.
+
+### Risk 5: LLM Confusion
+**Mitigation**: Clear documentation + examples in AGENTS.md
+
+## Next Immediate Steps
+
+1. ✓ Design FFI system (DONE - see `.aisl.ffi-design`)
+2. ⏳ Implement FFI opcodes in bytecode.h
+3. ⏳ Implement FFI in vm.c (dlopen/dlsym)
+4. ⏳ Add FFI to compiler.c
+5. ⏳ Create extensions/ directory structure
+6. ⏳ Extract HTTP as proof-of-concept
+
+**Status: Ready to implement Phase 1 (FFI Core)**
