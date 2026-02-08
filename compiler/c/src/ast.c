@@ -67,6 +67,18 @@ Type* type_json() {
     return type_new(TYPE_JSON);
 }
 
+Type* type_process() {
+    return type_new(TYPE_PROCESS);
+}
+
+Type* type_socket() {
+    return type_new(TYPE_SOCKET);
+}
+
+Type* type_file() {
+    return type_new(TYPE_FILE);
+}
+
 // EXPRESSION CONSTRUCTORS
 
 Expr* expr_new(ExprKind kind, Type* type) {

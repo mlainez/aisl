@@ -7,11 +7,13 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdint.h>
 #include <limits.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -573,9 +575,36 @@ static int process_kill(Process* proc, int signal) {
 static char* process_read(Process* proc) {
     if (!proc) return strdup("");
     
+    // Use select() with timeout to wait for data
+    fd_set readfds;
+    struct timeval timeout;
+    FD_ZERO(&readfds);
+    FD_SET(proc->stdout_fd, &readfds);
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 50000; // 50ms timeout
+    
+    int ready = select(proc->stdout_fd + 1, &readfds, NULL, NULL, &timeout);
+    if (ready <= 0) {
+        // Timeout or error - no data available
+        return strdup("");
+    }
+    
+    // Make stdout non-blocking for the read
+    int flags = fcntl(proc->stdout_fd, F_GETFL, 0);
+    fcntl(proc->stdout_fd, F_SETFL, flags | O_NONBLOCK);
+    
     char buffer[4096];
     ssize_t n = read(proc->stdout_fd, buffer, sizeof(buffer) - 1);
-    if (n < 0) return strdup("");
+    
+    // Restore blocking mode
+    fcntl(proc->stdout_fd, F_SETFL, flags);
+    
+    if (n < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            return strdup("");
+        }
+        return strdup("");
+    }
     
     buffer[n] = '\0';
     return strdup(buffer);
@@ -628,6 +657,9 @@ static Socket* tcp_accept(Socket* server_sock) {
     
     Socket* client_sock = malloc(sizeof(Socket));
     client_sock->is_udp = false;
+    client_sock->is_tls = false;
+    client_sock->ssl = NULL;
+    client_sock->ssl_ctx = NULL;
     
     socklen_t addr_len = sizeof(client_sock->addr);
     client_sock->sockfd = accept(server_sock->sockfd, 
@@ -840,10 +872,34 @@ static Value channel_recv(Channel* ch) {
 
 VM* vm_new(BytecodeProgram* program) {
     VM* vm = malloc(sizeof(VM));
+    if (!vm) {
+        fprintf(stderr, "Failed to allocate VM struct\n");
+        return NULL;
+    }
+    
+    // Allocate stack dynamically
+    vm->stack = malloc(STACK_SIZE * sizeof(Value));
+    if (!vm->stack) {
+        fprintf(stderr, "Failed to allocate VM stack (%zu bytes)\n", STACK_SIZE * sizeof(Value));
+        free(vm);
+        return NULL;
+    }
+    
+    // Allocate call stack dynamically
+    vm->call_stack = malloc(CALL_STACK_SIZE * sizeof(CallFrame));
+    if (!vm->call_stack) {
+        fprintf(stderr, "Failed to allocate VM call stack (%zu bytes)\n", CALL_STACK_SIZE * sizeof(CallFrame));
+        free(vm->stack);
+        free(vm);
+        return NULL;
+    }
+    
     vm->program = program;
     vm->ip = 0;
     vm->sp = 0;
     vm->call_sp = 0;
+    vm->stack_capacity = STACK_SIZE;
+    vm->call_stack_capacity = CALL_STACK_SIZE;
     vm->running = true;
     vm->exit_code = 0;
 
@@ -880,6 +936,9 @@ void vm_free(VM* vm) {
         lib = next;
     }
     
+    // Free dynamic allocations
+    free(vm->stack);
+    free(vm->call_stack);
     free(vm->globals);
     free(vm);
 }
@@ -1137,7 +1196,8 @@ int vm_run(VM* vm) {
                 uint32_t idx = inst.operand.uint_val;
                 uint32_t fp = vm->call_stack[vm->call_sp - 1].frame_pointer;
                 Value val = vm->stack[fp + idx];
-                push(vm, value_clone(val));
+                Value cloned = value_clone(val);
+                push(vm, cloned);
                 vm->ip++;
                 break;
             }
@@ -1455,7 +1515,7 @@ int vm_run(VM* vm) {
                 uint32_t func_idx = inst.operand.call.func_idx;
                 uint32_t arg_count = inst.operand.call.arg_count;
 
-                if (vm->call_sp >= CALL_STACK_SIZE) {
+                if (vm->call_sp >= vm->call_stack_capacity) {
                     fprintf(stderr, "Call stack overflow\n");
                     return 1;
                 }
@@ -1465,14 +1525,18 @@ int vm_run(VM* vm) {
                 }
 
                 uint32_t fp = vm->sp - arg_count;
+                uint32_t local_count = vm->program->functions[func_idx].local_count;
+                
                 CallFrame frame = {
                     .return_addr = vm->ip + 1,
                     .frame_pointer = fp,
-                    .local_count = vm->program->functions[func_idx].local_count
+                    .local_count = local_count
                 };
                 vm->call_stack[vm->call_sp++] = frame;
 
-                while (vm->sp < fp + frame.local_count) {
+                // Initialize locals AFTER parameters (locals start at fp + arg_count)
+                uint32_t target_sp = fp + local_count;
+                while (vm->sp < target_sp) {
                     Value unit = {.type = VAL_UNIT};
                     push(vm, unit);
                 }
@@ -1489,6 +1553,17 @@ int vm_run(VM* vm) {
 
                 Value ret = pop(vm);
                 CallFrame frame = vm->call_stack[--vm->call_sp];
+                
+                // Free all string locals before resetting stack pointer
+                uint32_t fp = frame.frame_pointer;
+                uint32_t local_count = frame.local_count;
+                for (uint32_t i = 0; i < local_count; i++) {
+                    if (vm->stack[fp + i].type == VAL_STRING && vm->stack[fp + i].data.string_val != NULL) {
+                        free(vm->stack[fp + i].data.string_val);
+                        vm->stack[fp + i].data.string_val = NULL;
+                    }
+                }
+                
                 vm->sp = frame.frame_pointer;
 
                 if (vm->call_sp == 0) {
@@ -2537,9 +2612,27 @@ int vm_run(VM* vm) {
 
             case OP_PROCESS_WAIT: {
                 Value proc_val = pop(vm);
+                
+                // TYPE SAFETY: Ensure we have a process
+                if (proc_val.type != VAL_PROCESS) {
+                    fprintf(stderr, "Runtime Error: process_wait expects a process handle, got type %d\n", proc_val.type);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Process* proc = (Process*)proc_val.data.ptr_val;
+                
+                // NULL CHECK: Ensure process pointer is valid
+                if (!proc) {
+                    fprintf(stderr, "Runtime Error: process_wait received NULL process pointer\n");
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 int exit_code = process_wait(proc);
-                Value result = {.type = VAL_I32, .data.i32_val = exit_code};
+                Value result = {.type = VAL_INT, .data.i32_val = exit_code};
                 push(vm, result);
                 vm->ip++;
                 break;
@@ -2582,7 +2675,25 @@ int vm_run(VM* vm) {
 
             case OP_PROCESS_READ: {
                 Value proc_val = pop(vm);
+                
+                // TYPE SAFETY: Ensure we have a process
+                if (proc_val.type != VAL_PROCESS) {
+                    fprintf(stderr, "Runtime Error: process_read expects a process handle, got type %d\n", proc_val.type);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Process* proc = (Process*)proc_val.data.ptr_val;
+                
+                // NULL CHECK: Ensure process pointer is valid
+                if (!proc) {
+                    fprintf(stderr, "Runtime Error: process_read received NULL process pointer\n");
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 char* output = process_read(proc);
                 Value result = {.type = VAL_STRING, .data.string_val = output};
                 push(vm, result);
@@ -2593,10 +2704,30 @@ int vm_run(VM* vm) {
             case OP_PROCESS_WRITE: {
                 Value data_val = pop(vm);
                 Value proc_val = pop(vm);
+                
+                // TYPE SAFETY: Ensure we have a process
+                if (proc_val.type != VAL_PROCESS) {
+                    fprintf(stderr, "Runtime Error: process_write expects a process handle, got type %d\n", proc_val.type);
+                    free(data_val.data.string_val);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Process* proc = (Process*)proc_val.data.ptr_val;
+                
+                // NULL CHECK: Ensure process pointer is valid
+                if (!proc) {
+                    fprintf(stderr, "Runtime Error: process_write received NULL process pointer\n");
+                    free(data_val.data.string_val);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 int result = process_write(proc, data_val.data.string_val);
                 free(data_val.data.string_val);
-                Value result_val = {.type = VAL_I32, .data.i32_val = result};
+                Value result_val = {.type = VAL_BOOL, .data.bool_val = (result >= 0)};
                 push(vm, result_val);
                 vm->ip++;
                 break;
@@ -2608,6 +2739,15 @@ int vm_run(VM* vm) {
                 Value port_val = pop(vm);
                 int port = port_val.data.i32_val;
                 Socket* sock = tcp_listen(port);
+                
+                // NULL CHECK: tcp_listen can return NULL on error
+                if (!sock) {
+                    fprintf(stderr, "Runtime Error: tcp_listen failed to create listening socket on port %d\n", port);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Value result = {.type = VAL_TCP_SOCKET, .data.ptr_val = sock};
                 push(vm, result);
                 vm->ip++;
@@ -2616,8 +2756,35 @@ int vm_run(VM* vm) {
 
             case OP_TCP_ACCEPT: {
                 Value sock_val = pop(vm);
+                
+                // TYPE SAFETY: Ensure we have a TCP socket
+                if (sock_val.type != VAL_TCP_SOCKET) {
+                    fprintf(stderr, "Runtime Error: tcp_accept expects a TCP socket, got type %d\n", sock_val.type);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Socket* server_sock = (Socket*)sock_val.data.ptr_val;
+                
+                // NULL CHECK: Ensure socket pointer is valid
+                if (!server_sock) {
+                    fprintf(stderr, "Runtime Error: tcp_accept received NULL socket pointer\n");
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Socket* client_sock = tcp_accept(server_sock);
+                
+                // NULL CHECK: tcp_accept can return NULL on error
+                if (!client_sock) {
+                    fprintf(stderr, "Runtime Error: tcp_accept failed to accept connection\n");
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Value result = {.type = VAL_TCP_SOCKET, .data.ptr_val = client_sock};
                 push(vm, result);
                 vm->ip++;
@@ -2628,8 +2795,18 @@ int vm_run(VM* vm) {
                 Value port_val = pop(vm);
                 Value host_val = pop(vm);
                 int port = port_val.data.i32_val;
+                
                 Socket* sock = tcp_connect(host_val.data.string_val, port);
                 free(host_val.data.string_val);
+                
+                // NULL CHECK: tcp_connect can return NULL on error
+                if (!sock) {
+                    fprintf(stderr, "Runtime Error: tcp_connect failed to connect to host:port\n");
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Value result = {.type = VAL_TCP_SOCKET, .data.ptr_val = sock};
                 push(vm, result);
                 vm->ip++;
@@ -2651,10 +2828,29 @@ int vm_run(VM* vm) {
             case OP_TCP_SEND: {
                 Value data_val = pop(vm);
                 Value sock_val = pop(vm);
+                
+                // TYPE SAFETY: Ensure we have a TCP socket
+                if (sock_val.type != VAL_TCP_SOCKET) {
+                    fprintf(stderr, "Runtime Error: tcp_send expects a TCP socket, got type %d\n", sock_val.type);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Socket* sock = (Socket*)sock_val.data.ptr_val;
+                
+                // NULL CHECK: Ensure socket pointer is valid
+                if (!sock) {
+                    fprintf(stderr, "Runtime Error: tcp_send received NULL socket pointer\n");
+                    free(data_val.data.string_val);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 int result = tcp_send(sock, data_val.data.string_val);
                 free(data_val.data.string_val);
-                Value result_val = {.type = VAL_I32, .data.i32_val = result};
+                Value result_val = {.type = VAL_INT, .data.i32_val = result};
                 push(vm, result_val);
                 vm->ip++;
                 break;
@@ -2663,7 +2859,27 @@ int vm_run(VM* vm) {
             case OP_TCP_RECEIVE: {
                 Value max_bytes_val = pop(vm);
                 Value sock_val = pop(vm);
+                
+                // TYPE SAFETY: Ensure we have a TCP socket, not a Process or other type
+                if (sock_val.type != VAL_TCP_SOCKET) {
+                    fprintf(stderr, "Runtime Error: tcp_receive expects a TCP socket, got type %d\n", sock_val.type);
+                    fprintf(stderr, "This usually means you passed a process handle or other type to tcp_receive.\n");
+                    fprintf(stderr, "Check that you're not mixing database handles with socket handles.\n");
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Socket* sock = (Socket*)sock_val.data.ptr_val;
+                
+                // NULL CHECK: Ensure socket pointer is valid
+                if (!sock) {
+                    fprintf(stderr, "Runtime Error: tcp_receive received NULL socket pointer\n");
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 int max_bytes = max_bytes_val.data.i32_val;
                 char* data = tcp_receive(sock, max_bytes);
                 Value result = {.type = VAL_STRING, .data.string_val = data};
@@ -2674,7 +2890,22 @@ int vm_run(VM* vm) {
 
             case OP_TCP_CLOSE: {
                 Value sock_val = pop(vm);
+                
+                // TYPE SAFETY: Ensure we have a TCP socket
+                if (sock_val.type != VAL_TCP_SOCKET) {
+                    fprintf(stderr, "Runtime Error: tcp_close expects a TCP socket, got type %d\n", sock_val.type);
+                    vm->running = false;
+                    vm->exit_code = 1;
+                    return 1;
+                }
+                
                 Socket* sock = (Socket*)sock_val.data.ptr_val;
+                
+                // NULL CHECK: tcp_close handles NULL gracefully, but we should still check
+                if (!sock) {
+                    fprintf(stderr, "Warning: tcp_close received NULL socket pointer\n");
+                }
+                
                 tcp_close(sock);
                 Value unit = {.type = VAL_UNIT};
                 push(vm, unit);

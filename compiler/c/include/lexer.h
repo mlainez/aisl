@@ -96,6 +96,11 @@ typedef enum {
     // v7.0 Concurrency types
     TOK_TYPE_CHANNEL,
     TOK_TYPE_FUTURE,
+    
+    // v8.0 Handle types (2026-02-08)
+    TOK_TYPE_PROCESS,
+    TOK_TYPE_SOCKET,
+    TOK_TYPE_FILE,
 
     // Test framework keywords
     TOK_TEST_SPEC,

@@ -1,6 +1,11 @@
 @(meta-spec)
 @(proj aisl ty:sys-lang principle:one-way-only)
-@(stat tests:115 passing:115 stdlib:11-modules)
+@(stat tests:117 passing:117 stdlib:11-modules)
+@(types
+  (primitives int float bool string)
+  (handles process socket file)
+  (collections array map json)
+  (special result regex))
 @(stdlib
   (core arith cmp log bit cast)
   (string concat len split trim contains replace)
@@ -9,7 +14,8 @@
   (map new get set has del keys vals)
   (io print println read file_read file_write)
   (net tcp http ws)
-  (sys time sleep env exit process))
+  (sys time sleep env exit process)
+  (db sqlite))
 @(philosophy
   (no-backward-compat "llms-regenerate-dont-edit")
   (one-way-only "exactly-one-form-per-construct")

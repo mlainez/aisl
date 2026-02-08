@@ -1,12 +1,6 @@
 # AISL for AI Agents: A Complete Guide
 
-**Last Updated**: 2026-02-08  
 **Target Audience**: LLMs, AI Agents, Code Generation Systems
-
-**Recent Changes** (2026-02-08):
-- Removed 621 lines of dead code from compiler (HTTP/WebSocket/base64 C implementations)
-- Removed 137 verbose section header comments for token efficiency
-- All HTTP/WebSocket functionality now in pure AISL (stdlib/net/)
 
 ---
 
@@ -372,10 +366,17 @@ Generate these - the compiler desugars them to Core:
 (call string_concat a b)               ; Concatenate -> string
 (call string_equals a b)               ; Compare equality -> bool
 (call string_contains haystack needle) ; Check contains -> bool
+(call string_slice text start len)    ; Extract substring (start, LENGTH) -> string
 (call string_split text delimiter)     ; Split -> array
 (call string_trim text)                ; Remove whitespace -> string
 (call string_replace text old new)     ; Replace substring -> string
 ```
+
+**CRITICAL**: `string_slice` takes `(text, start, LENGTH)` NOT `(text, start, end)`.
+- To get characters 1-3: `(call string_slice text 1 3)` extracts 3 characters starting at index 1
+- To get substring from index 5 to 10: `(call string_slice text 5 5)` (length = 10 - 5)
+
+**There is only ONE string slicing operation**: `string_slice`. Do not use `string_substring` or any other variants.
 
 ### I/O Operations
 
@@ -436,12 +437,16 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 
 ### Operations That Require Stdlib Import
 
-| Operation | Old (❌ Removed) | New (✅ Use This) |
-|-----------|------------------|-------------------|
-| **String operations** | `(call string_split ...)` | `(import string_utils)` then `(call split ...)` |
-| | `(call string_trim ...)` | `(import string_utils)` then `(call trim ...)` |
-| | `(call string_contains ...)` | `(import string_utils)` then `(call contains ...)` |
-| | `(call string_replace ...)` | `(import string_utils)` then `(call replace ...)` |
+**CRITICAL: Many operations require importing stdlib modules.**
+
+AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written in AISL."** The following operations require importing stdlib modules:
+
+| Operation | Stdlib Import Required | Function Name |
+|-----------|------------------------|---------------|
+| **String operations** | `(import string_utils)` | `split`, `trim`, `contains`, `replace` |
+| | `(import string_utils) then (call trim ...)` | `(import string_utils)` then `(call trim ...)` |
+| | `(import string_utils) then (call contains ...)` | `(import string_utils)` then `(call contains ...)` |
+| | `(import string_utils) then (call replace ...)` | `(import string_utils)` then `(call replace ...)` |
 | **JSON operations** | `(call json_parse ...)` | `(import json_utils)` then `(call json_parse ...)` |
 | | `(call json_stringify ...)` | `(import json_utils)` then `(call json_stringify ...)` |
 | | `(call json_new_object)` | `(import json_utils)` then `(call json_new_object)` |
@@ -530,7 +535,7 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 - ✅ Comparisons (eq, ne, lt, gt, le, ge)
 - ✅ Basic math (abs, min, max, sqrt, pow)
 - ✅ Type conversions (cast_int_float, string_from_int, etc.)
-- ✅ Basic string ops (string_length, string_concat, string_substring)
+- ✅ Basic string ops (string_length, string_concat, string_slice)
 - ✅ I/O (print, print_ln, read_line)
 - ✅ File operations (file_read, file_write, file_exists)
 - ✅ Arrays (array_new, array_push, array_get, array_set, array_length)
@@ -905,6 +910,46 @@ AISL has a built-in test framework. Add tests to verify behavior:
 
 ## Common Pitfalls for LLMs
 
+### ⚠️ CRITICAL: Reserved keyword conflicts with variable names
+
+**PARSER BUG:** Certain keywords used in AISL's test-spec framework are reserved and CANNOT be used as variable names anywhere in your code, even outside of test contexts.
+
+**Reserved keywords that cause parse errors:**
+- `input` - Used in test-spec `(input ...)` clauses
+- `expect` - Used in test-spec `(expect ...)` clauses  
+- `case` - Used in test-spec `(case "description" ...)` clauses
+
+### ❌ Don't: Use reserved keywords as variable names
+
+```lisp
+(fn process_data -> int
+  (set input string "test")        ; ❌ ERROR: 'input' is reserved!
+  (set result string (call parse input))  ; ❌ Parsed as EXPR_LIT_UNIT, not variable!
+  (ret 0))
+```
+
+**What happens:** The parser treats `input`, `expect`, and `case` as special keywords even outside test-spec contexts. When used as variable names, they are parsed as **unit literals (EXPR_LIT_UNIT)** instead of variable references (EXPR_VAR), causing type errors and segfaults.
+
+### ✅ Do: Use descriptive, non-reserved variable names
+
+```lisp
+(fn process_data -> int
+  (set data_input string "test")      ; ✅ Works: not a keyword
+  (set my_input string "test")        ; ✅ Works: not a keyword
+  (set input_data string "test")      ; ✅ Works: not a keyword
+  (set result string (call parse data_input))  ; ✅ Correctly parsed as variable
+  (ret 0))
+```
+
+**Safe alternatives:**
+- Instead of `input` → use `data_input`, `my_input`, `text_input`, `raw_input`
+- Instead of `expect` → use `expected`, `expected_value`, `target`
+- Instead of `case` → use `test_case`, `case_value`, `variant`
+
+**Status:** This is a known parser limitation. The test-spec keywords should only be reserved within test-spec contexts, but currently they're reserved globally.
+
+---
+
 ### ⚠️ CRITICAL: If statement with multiple statements bug
 
 **PARSER BUG:** The current parser treats all statements after an `if` condition as part of the then-branch, making it **impossible to have an else-branch** with the intuitive syntax.
@@ -954,14 +999,14 @@ AISL has a built-in test framework. Add tests to verify behavior:
 (call print message)
 ```
 
-**Status:** This is a known parser limitation. The documented syntax `(if condition then_expr else_expr)` from AISL-AGENT.md is **not yet implemented** in the v3 parser. For now, use the workarounds above.
+**Status:** This is a known parser limitation. The documented syntax `(if condition then_expr else_expr)` from AISL-AGENT.md is not yet implemented. Use the workarounds above.
 
 ---
 
-### ❌ Don't: Use old 'mod' keyword for modules
+### ❌ Don't: Use 'mod' keyword for modules
 
 ```lisp
-(mod my_module    ; ERROR: 'mod' is no longer valid
+(mod my_module    ; ERROR: 'mod' is not valid
   (fn add x int y int -> int
     (ret (call add x y))))
 ```
@@ -1088,15 +1133,37 @@ AISL has a built-in test framework. Add tests to verify behavior:
 (set map string "values")   ; ERROR: 'map' is a type keyword
 ```
 
+**✅ FIXED (2026-02-08):** Parser now rejects type keywords with clear error message:
+```
+Parse error at line 3: Cannot use type keyword 'json' as variable name. 
+Use a descriptive name instead (e.g., 'json_data', 'json_value')
+```
+
+**What used to happen (before fix):** The variable was parsed as a type instead of a name, causing it to store/print as "0" or garbage values instead of the actual content.
+
+**Example that now fails at compile time:**
+```lisp
+(fn test -> int
+  (set json string "{\"status\":\"ok\"}")  ; Compiler error!
+  (call print json)
+  (ret 0))
+```
+
 ### ✅ Do: Use descriptive non-reserved names
 
 ```lisp
 (set json_str string "test")     ; OK: Different name
 (set data_array string "data")   ; OK: Different name
 (set value_map string "values")  ; OK: Different name
+
+; Fixed example:
+(fn test -> int
+  (set json_str string "{\"status\":\"ok\"}")
+  (call print json_str)  ; Prints: {"status":"ok"} (correct!)
+  (ret 0))
 ```
 
-**Reserved type keywords:** `int`, `float`, `string`, `bool`, `json`, `array`, `map`, `result`, `option`
+**Reserved type keywords:** `int`, `float`, `string`, `bool`, `json`, `array`, `map`, `result`, `option`, `channel`, `future`, `unit`
 
 ### ❌ Don't: Name modules with type keywords
 
@@ -1226,7 +1293,7 @@ AISL is designed for predictable performance:
 
 ---
 
-## Current Limitations (as of 2026-02-07)
+## Current Limitations
 
 ### Not Yet Implemented
 

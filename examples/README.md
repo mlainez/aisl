@@ -1,80 +1,67 @@
 # AISL Examples
 
-This directory contains practical examples demonstrating AISL's capabilities.
+Practical examples demonstrating AISL capabilities.
 
 ## Available Examples
 
 ### Basic Examples
 
-- **hello_world.aisl** - The classic "Hello, World!" program
-- **simple_typed.aisl** - Simple typed variable demonstration
+- **hello_world.aisl** - Classic "Hello, World!" program
+- **simple_typed.aisl** - Typed variable demonstration
 - **multi_print.aisl** - Multiple print statements
-- **typed_add.aisl** - Basic addition with type annotations
-- **typed_math.aisl** - Mathematical operations with types
+- **typed_add.aisl** - Addition with type annotations
+- **typed_math.aisl** - Mathematical operations
 
-### Web Server Examples
+### Web Applications
 
-- **sinatra.aisl** - A Sinatra-style web server with routing
-  - Listens on port 8080
-  - Routes:
-    - `GET /hello` → Returns HTML response (200 OK)
-    - `GET /hello.json` → Returns JSON response (200 OK)
-    - Any other path → Returns 404 Not Found
-  - Demonstrates:
-    - TCP socket handling
-    - HTTP request parsing
-    - Exact path matching with `string_contains`
-    - Conditional routing with `if_string`
-    - Multiple response types (HTML, JSON, 404)
-    - Recursive accept loop pattern
+- **todo_app/** - Full-featured TODO app with SQLite database
+  - Complete CRUD operations
+  - Database persistence
+  - Modern web interface
+  - See `todo_app/README.md` for details
+
+### Web Servers
+
+- **sinatra.aisl** - Production HTTP server with routing
+  - Multiple routes (GET /hello, /hello.json, 404 handling)
+  - TCP socket handling
+  - HTTP request parsing
+  - Recommended starting point for web servers
 
 - **echo_server.aisl** - Simple TCP echo server
 - **simple_server.aisl** - Basic TCP server template
-- **simple_json_server.aisl** - JSON-based HTTP server
-- **sequential_server.aisl** - Sequential request handling server
-- **working_server.aisl** - Working HTTP server example
-- **final_server.aisl** - Complete server implementation
-- **test_server.aisl** - Server with test/debug output
-- **sinatra_simple.aisl** - Simplified Sinatra-style server
-- **sinatra_demo.aisl** - Sinatra server demonstration
-- **sinatra_debug.aisl** - Sinatra server with debug output
-- **sinatra_recursive.aisl** - Recursive request handling pattern
 
 ## Running Examples
 
-To compile and run an example:
+Compile and run any example:
 
 ```bash
 # Compile
-./compiler/c/bin/aislc examples/hello_world.aisl hello_world.aislc
+./compiler/c/bin/aislc examples/hello_world.aisl /tmp/hello.aislc
 
 # Run
-./compiler/c/bin/aisl-run hello_world.aislc
+./compiler/c/bin/aisl-run /tmp/hello.aislc
 ```
 
-For the web server example:
+For web servers:
 
 ```bash
-# Compile
-./compiler/c/bin/aislc examples/sinatra.aisl sinatra.aislc
+# Compile and run
+./compiler/c/bin/aislc examples/sinatra.aisl /tmp/server.aislc
+./compiler/c/bin/aisl-run /tmp/server.aislc &
 
-# Run in background
-./compiler/c/bin/aisl-run sinatra.aislc &
+# Test
+curl http://localhost:8080/hello
+curl http://localhost:8080/hello.json
 
-# Test with curl
-curl http://localhost:8080/hello        # Returns HTML
-curl http://localhost:8080/hello.json   # Returns JSON
-curl http://localhost:8080/             # Returns 404
-curl http://localhost:8080/other        # Returns 404
-
-# Stop server
+# Stop
 pkill aisl-run
 ```
 
 ## Contributing Examples
 
-When adding new examples:
+When adding examples:
 1. Use descriptive names
-2. Include comments explaining key concepts
-3. Keep examples focused on a single feature or use case
-4. Add entry to this README
+2. Keep examples focused on one feature
+3. Add entry to this README
+4. Ensure example compiles and runs

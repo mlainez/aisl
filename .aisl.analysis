@@ -95,9 +95,9 @@ Process:
 4. Keep only language description for users
 5. NEVER generate implementation tracking markdown files
 
-@(fix-bugs-directive-2026-02-07)
+@(fix-bugs-directive)
 
-**NEW DIRECTIVE: Fix bugs in the language when discovered during use**
+**DIRECTIVE: Fix bugs in the language when discovered during use**
 
 Process:
 1. When writing AISL code, if you hit a bug or limitation
@@ -135,11 +135,11 @@ Examples:
 
 Maximum explicitness = minimum ambiguity = LLM-friendly
 
-@(runtime-errors-2026-02-07)
+@(runtime-errors)
 
-**DISCOVERED: Reserved type keywords used as variable names cause silent failures**
+**✅ FIXED: Reserved type keywords used as variable names cause silent failures**
 
-Issue found during LLM generation testing:
+Issue:
 ```
 (set json string "{\"model\":\"codellama\"}")  ; json is TYPE keyword
 (call print json)                              ; Prints "0" not string!
@@ -147,30 +147,60 @@ Issue found during LLM generation testing:
 
 Root cause:
 - Lexer tokenizes 'json' as TOK_TYPE_JSON not TOK_IDENTIFIER
-- Parser accepts it (no error check)
-- VM treats as type confusion
+- Parser was accepting it
+- VM treated as type confusion
 - Silent runtime failure (prints wrong value, crashes on string ops)
 
-**CRITICAL BUG**: Parser should reject type keywords as variable names
+**Fix**:
+- Added parser check in `parser.c:512-533` to reject type keywords as variable names
+- Error message: "Cannot use type keyword 'X' as variable name. Use a descriptive name instead (e.g., 'X_data', 'X_value')"
 
 Reserved keywords that CANNOT be variable names:
 - int, float, string, bool
-- json, array, map, result, option, regex
+- json, array, map
+- process, socket, file
+- channel, future, unit
 
-Error should be: "Cannot use type keyword 'json' as variable name"
-
-Workaround for LLMs:
+Recommended variable names:
 - Use json_str, json_data, json_obj instead of json
 - Use arr, data_array instead of array
 - Use hashmap, value_map instead of map
 
-**ACTION NEEDED**: Add parser check to reject type keywords as identifiers
+**STATUS**: ✅ FIXED - Parser rejects type keywords with helpful error message
 
-@(core-ir-syntax-confusion-2026-02-07)
+@(vm-crash-uninitialized-tls)
+
+**✅ FIXED: VM crash after 2-5 requests due to uninitialized TLS fields**
+
+Issue:
+```
+Request 1-4: ✓ Success
+Request 5: ✗ CRASH in tcp_receive() at line 754
+```
+
+Root cause in `vm.c:655-671` (tcp_accept function):
+- `tcp_accept()` allocated Socket struct but only initialized `is_udp` field
+- Left `is_tls`, `ssl`, `ssl_ctx` fields UNINITIALIZED
+- Random memory values made `is_tls` appear true
+- `tcp_receive()` checked uninitialized `is_tls` → called `SSL_read()` with garbage pointer → SEGFAULT
+
+**Fix**:
+Added proper initialization in `tcp_accept()`:
+```c
+client_sock->is_tls = false;
+client_sock->ssl = NULL;
+client_sock->ssl_ctx = NULL;
+```
+
+Location: `compiler/c/src/vm.c:655-671`
+
+**STATUS**: ✅ FIXED - All socket tests pass reliably
+
+@(core-ir-syntax-confusion)
 
 **DISCOVERED: Core IR constructs are NOT function calls**
 
-Common LLM mistake during testing:
+Common LLM mistake:
 ```
 (call label my_label)   ; WRONG - parse error
 (call goto my_label)    ; WRONG - parse error
@@ -197,12 +227,12 @@ When to use:
 
 Prefer Agent constructs when possible:
 - while/loop instead of label/goto
-- if instead of ifnot (when if is available)
+- if instead of ifnot
 - break/continue for loop control
 
 **FOR LLMs**: Use label/goto/ifnot only for complex control flow that can't be expressed with while/loop/break/continue
 
-@(multiple-ret-restriction-2026-02-07)
+@(multiple-ret-restriction)
 
 **DISCOVERED: Cannot have multiple ret statements after labels in simple functions**
 
@@ -290,9 +320,9 @@ Alternative: Use result variable with multiple actions
 
 **FOR LLMs**: ALWAYS use the result variable pattern for conditional logic with separate then/else branches.
 
-**Status**: The documented syntax `(if condition then_expr else_expr)` from AISL-AGENT.md is NOT YET IMPLEMENTED in the v3 parser. Use workarounds above.
+**Status**: The documented syntax `(if condition then_expr else_expr)` from AISL-AGENT.md is NOT YET IMPLEMENTED. Use workarounds above.
 
-@(module-naming-restriction-2026-02-07)
+@(module-naming-restriction)
 
 **DISCOVERED: Cannot name modules same as type keywords**
 
@@ -310,7 +340,7 @@ Use descriptive names instead:
 - string_utils (NOT string)
 - map_utils (NOT map)
 
-@(string-ret-from-if-bug-2026-02-07)
+@(string-ret-from-if-bug)
 
 **DISCOVERED: Returning string literals from if blocks doesn't work**
 
@@ -337,7 +367,7 @@ Affects: String literals only (int returns work fine)
 
 **FOR LLMs**: NEVER return string literals directly from if blocks. Always use result variable pattern.
 
-@(missing-closing-paren-error-2026-02-07)
+@(missing-closing-paren-error)
 
 **DISCOVERED: Missing closing parenthesis causes confusing error**
 

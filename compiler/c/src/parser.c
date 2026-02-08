@@ -15,6 +15,9 @@ void parser_init(Parser* parser, Lexer* lexer) {
 
 // Error reporting with categorized error codes
 static void parser_error_code(Parser* parser, const char* code, const char* msg) {
+    if (parser->has_error) {
+        return;  // Don't overwrite first error
+    }
     parser->has_error = true;
     strncpy(parser->error_code, code, sizeof(parser->error_code) - 1);
     snprintf(parser->error_msg, sizeof(parser->error_msg),
@@ -75,6 +78,15 @@ Type* parser_parse_type(Parser* parser) {
         case TOK_TYPE_FUTURE:
             parser_advance(parser);
             return type_future(type_unit());
+        case TOK_TYPE_PROCESS:
+            parser_advance(parser);
+            return type_process();
+        case TOK_TYPE_SOCKET:
+            parser_advance(parser);
+            return type_socket();
+        case TOK_TYPE_FILE:
+            parser_advance(parser);
+            return type_file();
         default:
             parser_error(parser, "Expected type");
             return type_unit();
@@ -509,13 +521,39 @@ static Expr* parser_parse_statements_v3(Parser* parser) {
             parser_advance(parser); // (
             parser_advance(parser); // set
 
+            // Check if variable name is a type keyword
+            if (parser->current.kind >= TOK_TYPE_STRING && parser->current.kind <= TOK_TYPE_FILE) {
+                const char* type_name = "unknown";
+                switch (parser->current.kind) {
+                    case TOK_TYPE_STRING: type_name = "string"; break;
+                    case TOK_TYPE_BOOL: type_name = "bool"; break;
+                    case TOK_TYPE_UNIT: type_name = "unit"; break;
+                    case TOK_TYPE_INT: type_name = "int"; break;
+                    case TOK_TYPE_FLOAT: type_name = "float"; break;
+                    case TOK_TYPE_ARRAY: type_name = "array"; break;
+                    case TOK_TYPE_MAP: type_name = "map"; break;
+                    case TOK_TYPE_JSON: type_name = "json"; break;
+                    case TOK_TYPE_CHANNEL: type_name = "channel"; break;
+                    case TOK_TYPE_FUTURE: type_name = "future"; break;
+                    case TOK_TYPE_PROCESS: type_name = "process"; break;
+                    case TOK_TYPE_SOCKET: type_name = "socket"; break;
+                    case TOK_TYPE_FILE: type_name = "file"; break;
+                    default: break;
+                }
+                char error_msg[256];
+                snprintf(error_msg, sizeof(error_msg), 
+                    "Cannot use type keyword '%s' as variable name. Use a descriptive name instead (e.g., '%s_data', '%s_value')", 
+                    type_name, type_name, type_name);
+                parser_error_code(parser, "RESERVED_KEYWORD", error_msg);
+                return expr_seq(NULL, type_unit());
+            }
+
             char* var_name = strdup(parser->current.value.string_val);
             parser_advance(parser);
 
             // STRICT MODE: Type is REQUIRED for all variable declarations
             Type* var_type = NULL;
-            // Check if current token is a type keyword (string, bool, unit, i8-u64, f32, f64, array, map, json, channel, future)
-            if ((parser->current.kind >= TOK_TYPE_STRING && parser->current.kind <= TOK_TYPE_FUTURE)) {
+            if ((parser->current.kind >= TOK_TYPE_STRING && parser->current.kind <= TOK_TYPE_FILE)) {
                 var_type = parser_parse_type(parser);
             } else {
                 // ERROR: Type is missing
@@ -805,7 +843,9 @@ static Definition* parser_parse_function_v3(Parser* parser) {
     // Parse body statements
     Expr* body = parser_parse_statements_v3(parser);
 
-    parser_expect(parser, TOK_RPAREN);
+    if (!parser->has_error) {
+        parser_expect(parser, TOK_RPAREN);
+    }
 
     Definition* def = malloc(sizeof(Definition));
     def->kind = DEF_FUNCTION;

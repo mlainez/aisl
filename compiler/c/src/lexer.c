@@ -216,6 +216,9 @@ static Token read_identifier(Lexer* lexer) {
     else if (strcmp(str, "json") == 0) kind = TOK_TYPE_JSON;
     else if (strcmp(str, "channel") == 0) kind = TOK_TYPE_CHANNEL;
     else if (strcmp(str, "future") == 0) kind = TOK_TYPE_FUTURE;
+    else if (strcmp(str, "process") == 0) kind = TOK_TYPE_PROCESS;
+    else if (strcmp(str, "socket") == 0) kind = TOK_TYPE_SOCKET;
+    else if (strcmp(str, "file") == 0) kind = TOK_TYPE_FILE;
     else if (strcmp(str, "true") == 0) kind = TOK_TRUE;
     else if (strcmp(str, "false") == 0) kind = TOK_FALSE;
     

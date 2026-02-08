@@ -10,3 +10,6 @@ compiler/c/bin/
 compiler/c/src/*.o
 compiler/c/*.o
 *.o
+
+# local databases
+*.db

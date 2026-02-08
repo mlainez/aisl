@@ -1,25 +1,28 @@
 (module sqlite
   (import string_utils)
   
-  (fn open path string -> string
+  (fn open path string -> process
     (set args array (call array_new 1))
     (call array_push args path)
-    (set proc string (call process_spawn "sqlite3" args))
+    (set proc process (call process_spawn "sqlite3" args))
     (call process_write proc ".mode list\n")
+    (call process_read proc)
     (call process_write proc ".separator |\n")
+    (call process_read proc)
     (ret proc))
   
-  (fn close db string -> int
+  (fn close db process -> int
     (call process_write db ".quit\n")
     (set exit_code int (call process_wait db))
     (ret exit_code))
   
-  (fn exec db string sql string -> bool
+  (fn exec db process sql string -> bool
     (set sql_with_newline string (call string_concat sql "\n"))
     (set written bool (call process_write db sql_with_newline))
+    (call process_read db)
     (ret written))
   
-  (fn query db string sql string -> array
+  (fn query db process sql string -> array
     (set sql_with_newline string (call string_concat sql "\n"))
     (call process_write db sql_with_newline)
     (set output string (call process_read db))

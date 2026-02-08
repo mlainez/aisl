@@ -1174,7 +1174,7 @@ void compile_apply(Compiler* comp, Expr* expr) {
     
     if (strcmp(name, "string_slice") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 3) {
-            fprintf(stderr, "string_slice expects 3 arguments (str, start, end)\n");
+            fprintf(stderr, "string_slice expects 3 arguments (str, start, length)\n");
             exit(1);
         }
         Instruction inst = {.opcode = OP_STR_SLICE};

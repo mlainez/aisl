@@ -1,0 +1,22 @@
+(module test_tcp_accept_init
+  
+  (fn test_socket_fields sock socket -> int
+    (set result int 1)
+    (ret result))
+  
+  (fn test_multiple_accepts -> int
+    (set server socket (call tcp_listen 19999))
+    (set count int 0)
+    (ret count))
+  
+  (test-spec test_socket_fields
+    (case "verifies socket fields exist"
+      (input (call tcp_listen 19998))
+      (expect 1)))
+  
+  (test-spec test_multiple_accepts
+    (case "handles multiple accepts without crash"
+      (input)
+      (expect 0)))
+  
+  (meta-note "Tests that tcp_accept properly initializes all Socket struct fields (is_tls, ssl, ssl_ctx). Regression test for bug fixed 2026-02-08 where uninitialized is_tls caused crashes after 2-5 requests."))

@@ -4,8 +4,8 @@
 #include "bytecode.h"
 #include <pthread.h>
 
-#define STACK_SIZE 262144
-#define CALL_STACK_SIZE 8192
+#define STACK_SIZE 16777216
+#define CALL_STACK_SIZE 65536
 #define GC_HEAP_GROW_FACTOR 2
 
 // VALUE SYSTEM
@@ -125,12 +125,14 @@ typedef struct {
 
     // Execution state
     uint32_t ip;  // Instruction pointer
-    Value stack[STACK_SIZE];
+    Value* stack;  // Dynamic stack allocation
     uint32_t sp;  // Stack pointer
+    size_t stack_capacity;
 
     // Call stack
-    CallFrame call_stack[CALL_STACK_SIZE];
+    CallFrame* call_stack;  // Dynamic call stack allocation
     uint32_t call_sp;
+    size_t call_stack_capacity;
 
     // Globals
     Value* globals;

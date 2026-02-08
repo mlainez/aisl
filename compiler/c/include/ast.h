@@ -27,6 +27,10 @@ typedef enum {
     TYPE_CHANNEL,
     TYPE_MAP,
     TYPE_JSON,
+    // v8.0 Handle types (2026-02-08)
+    TYPE_PROCESS,
+    TYPE_SOCKET,
+    TYPE_FILE,
 } TypeKind;
 
 typedef struct Type Type;
@@ -388,6 +392,9 @@ Type* type_float();
 Type* type_array(Type* element);
 Type* type_map(Type* key, Type* value);
 Type* type_json();
+Type* type_process();
+Type* type_socket();
+Type* type_file();
 
 Expr* expr_lit_int(int64_t val);
 Expr* expr_lit_float(double val);

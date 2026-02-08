@@ -7,23 +7,25 @@
     (set i int 0)
     
     (while (call lt i text_len)
-      (set found bool false)
+      (set matches bool false)
       (set can_match bool (call le (call add i delim_len) text_len))
       
       (if can_match
-        (set substring string (call string_slice text i (call add i delim_len)))
-        (set matches bool (call string_equals substring delimiter))
-        (if matches
-          (set part string (call string_slice text start i))
-          (call array_push result part)
-          (set i int (call add i delim_len))
-          (set start int i)
-          (set found bool true)))
+        (set substring string (call string_slice text i delim_len))
+        (set matches bool (call string_equals substring delimiter)))
       
-      (ifnot found
+      (if matches
+        (set part_len int (call sub i start))
+        (set part string (call string_slice text start part_len))
+        (call array_push result part)
+        (set i int (call add i delim_len))
+        (set start int i))
+      
+      (if (call not matches)
         (set i int (call add i 1))))
     
-    (set final string (call string_slice text start text_len))
+    (set final_len int (call sub text_len start))
+    (set final string (call string_slice text start final_len))
     (call array_push result final)
     (ret result))
   
