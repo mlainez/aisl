@@ -26,8 +26,14 @@
     (set sql_with_newline string (call string_concat sql "\n"))
     (call process_write db sql_with_newline)
     (set output string (call process_read db))
-    (set lines array (call string_split output "\n"))
+    (set output_len int (call string_length output))
+    
     (set results array (call array_new 16))
+    
+    (if (call eq output_len 0)
+      (ret results))
+    
+    (set lines array (call string_split output "\n"))
     (set i int 0)
     (set len int (call array_length lines))
     (while (call lt i len)
