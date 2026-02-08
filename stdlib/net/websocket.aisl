@@ -47,8 +47,8 @@
   (fn parse_ws_url url string -> array
     (set arr array (call array_new 4))
     
-    (set is_wss bool (call string_eq (call string_slice url 0 6) "wss://"))
-    (set is_ws bool (call string_eq (call string_slice url 0 5) "ws://"))
+    (set is_wss bool (call string_equals (call string_slice url 0 6) "wss://"))
+    (set is_ws bool (call string_equals (call string_slice url 0 5) "ws://"))
     
     (if is_wss
       (call array_push arr "wss")
@@ -65,7 +65,7 @@
     (set url_len int (call string_length url_no_proto))
     (while (call lt i url_len)
       (set ch string (call string_slice url_no_proto i (call add i 1)))
-      (set is_slash bool (call string_eq ch "/"))
+      (set is_slash bool (call string_equals ch "/"))
       (if is_slash
         (set slash_pos int i)
         (break))
@@ -126,7 +126,7 @@
     (set port int (call array_get parts 2))
     (set path string (call array_get parts 3))
     
-    (set is_wss bool (call string_eq protocol "wss"))
+    (set is_wss bool (call string_equals protocol "wss"))
     (set socket string "")
     (if is_wss
       (set socket string (call tcp_tls_connect host port))

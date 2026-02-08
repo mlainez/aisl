@@ -53,7 +53,7 @@
     (while (call lt i prefix_len)
       (set text_ch string (call string_slice text i (call add i 1)))
       (set prefix_ch string (call string_slice prefix i (call add i 1)))
-      (set matches bool (call string_eq text_ch prefix_ch))
+      (set matches bool (call string_equals text_ch prefix_ch))
       (if (call not matches)
         (ret false))
       (set i int (call add i 1)))
@@ -80,7 +80,7 @@
     (set url_len int (call string_length url_no_proto))
     (while (call lt i url_len)
       (set ch string (call string_slice url_no_proto i (call add i 1)))
-      (set is_slash bool (call string_eq ch "/"))
+      (set is_slash bool (call string_equals ch "/"))
       (if is_slash
         (set slash_pos int i)
         (break))
@@ -131,7 +131,7 @@
     (set raw_len int (call string_length raw))
     (while (call lt i (call sub raw_len 3))
       (set substr string (call string_slice raw i (call add i 4)))
-      (set is_crlf bool (call string_eq substr "\r\n\r\n"))
+      (set is_crlf bool (call string_equals substr "\r\n\r\n"))
       (if is_crlf
         (set header_end int i)
         (break))
@@ -154,7 +154,7 @@
     (set path string (call array_get parts 3))
     
     (set sock string "")
-    (set is_https bool (call string_eq protocol "https"))
+    (set is_https bool (call string_equals protocol "https"))
     (if is_https
       (set sock string (call tcp_tls_connect host port))
       (set sock string (call tcp_connect host port)))
@@ -175,7 +175,7 @@
     (set path string (call array_get parts 3))
     
     (set sock string "")
-    (set is_https bool (call string_eq protocol "https"))
+    (set is_https bool (call string_equals protocol "https"))
     (if is_https
       (set sock string (call tcp_tls_connect host port))
       (set sock string (call tcp_connect host port)))

@@ -12,7 +12,7 @@
       (set part_count int (call array_length parts))
       (if (call gt part_count 1)
         (set path string (call array_get parts 1))
-        (set is_hello bool (call string_eq path "/hello"))
+        (set is_hello bool (call string_equals path "/hello"))
         (if is_hello
           (set response string "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 43\r\n\r\n<html><body>Hello from AISL</body></html>")
           (set response string "HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nNot Found"))))

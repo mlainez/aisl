@@ -26,7 +26,7 @@
     (set obj map (call json_new_object))
     (set obj map (call json_set obj "name" name))
     (set result string (call json_get obj "name"))
-    (set matches bool (call string_eq result name))
+    (set matches bool (call string_equals result name))
     (if matches
       (ret 1))
     (ret 0))

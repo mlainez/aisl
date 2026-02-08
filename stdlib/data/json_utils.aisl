@@ -276,7 +276,7 @@
   
   (fn is_object value map -> bool
     (set type_str string (call json_type value))
-    (ret (call string_eq type_str "object")))
+    (ret (call string_equals type_str "object")))
   
   (fn is_array value array -> bool
     (ret true))

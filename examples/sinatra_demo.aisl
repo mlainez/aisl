@@ -44,10 +44,10 @@
 
   (fn route_request path string -> string
     (set result string (call handle_not_found))
-    (set is_hello bool (call string_eq path "/hello"))
+    (set is_hello bool (call string_equals path "/hello"))
     (if is_hello
       (set result string (call handle_hello_html)))
-    (set is_json bool (call string_eq path "/hello.json"))
+    (set is_json bool (call string_equals path "/hello.json"))
     (if is_json
       (set result string (call handle_hello_json)))
     (ret result))

@@ -13,11 +13,11 @@
   
   (fn string_starts_with_char s string prefix string -> bool
     (set first string (call string_first_char s))
-    (ret (call string_eq first prefix)))
+    (ret (call string_equals first prefix)))
   
   (fn string_ends_with_char s string suffix string -> bool
     (set last string (call string_last_char s))
-    (ret (call string_eq last suffix)))
+    (ret (call string_equals last suffix)))
   
   (fn string_reverse s string -> string
     (set len int (call string_length s))
@@ -43,7 +43,7 @@
     (set i int 0)
     (while (call lt i len)
       (set char string (call string_slice s i (call add i 1)))
-      (set matches bool (call string_eq char target))
+      (set matches bool (call string_equals char target))
       (if matches
         (set count int (call add count 1)))
       (set i int (call add i 1)))
@@ -61,7 +61,7 @@
       (if is_digit
         (set i int (call add i 1))
         (continue))
-      (set is_minus bool (call string_eq char "-"))
+      (set is_minus bool (call string_equals char "-"))
       (set is_first bool (call eq i 0))
       (if is_minus
         (if is_first

@@ -370,6 +370,7 @@ Generate these - the compiler desugars them to Core:
 ```lisp
 (call string_length text)              ; Get length -> int
 (call string_concat a b)               ; Concatenate -> string
+(call string_equals a b)               ; Compare equality -> bool
 (call string_contains haystack needle) ; Check contains -> bool
 (call string_split text delimiter)     ; Split -> array
 (call string_trim text)                ; Remove whitespace -> string

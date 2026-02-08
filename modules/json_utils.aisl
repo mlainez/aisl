@@ -20,11 +20,11 @@
   
   (fn is_object data json -> bool
     (set type_str string (call json_type data))
-    (ret (call string_eq type_str "object")))
+    (ret (call string_equals type_str "object")))
   
   (fn is_array data json -> bool
     (set type_str string (call json_type data))
-    (ret (call string_eq type_str "array")))
+    (ret (call string_equals type_str "array")))
   
   (fn get_length data json -> int
     (ret (call json_length data))))

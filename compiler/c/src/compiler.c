@@ -1192,10 +1192,10 @@ void compile_apply(Compiler* comp, Expr* expr) {
         return;
     }
     
-    if (strcmp(name, "string_eq") == 0) {
+    if (strcmp(name, "string_equals") == 0) {
         // String equality comparison
         if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "string_eq expects 2 arguments\n");
+            fprintf(stderr, "string_equals expects 2 arguments\n");
             exit(1);
         }
         Instruction inst = {.opcode = OP_EQ_STR};

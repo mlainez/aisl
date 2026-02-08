@@ -355,6 +355,7 @@ The compiler automatically selects the correct operation based on variable types
 ```scheme
 (call string_length text)              ; Get length -> int
 (call string_concat a b)               ; Concatenate -> string
+(call string_equals a b)               ; Compare equality -> bool
 (call string_substring text start len) ; Extract substring -> string
 ```
 

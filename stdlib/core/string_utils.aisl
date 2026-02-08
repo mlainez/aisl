@@ -12,7 +12,7 @@
       
       (if can_match
         (set substring string (call string_slice text i (call add i delim_len)))
-        (set matches bool (call string_eq substring delimiter))
+        (set matches bool (call string_equals substring delimiter))
         (if matches
           (set part string (call string_slice text start i))
           (call array_push result part)
@@ -80,7 +80,7 @@
     
     (while (call le i max_pos)
       (set substring string (call string_slice haystack i (call add i needle_len)))
-      (set matches bool (call string_eq substring needle))
+      (set matches bool (call string_equals substring needle))
       (if matches
         (ret true))
       (set i int (call add i 1)))
@@ -110,7 +110,7 @@
     (if too_long
       (ret false))
     (set start string (call string_slice text 0 prefix_len))
-    (ret (call string_eq start prefix)))
+    (ret (call string_equals start prefix)))
   
   (fn string_ends_with text string suffix string -> bool
     (set text_len int (call string_length text))
@@ -120,7 +120,7 @@
       (ret false))
     (set start int (call sub text_len suffix_len))
     (set end_part string (call string_slice text start text_len))
-    (ret (call string_eq end_part suffix)))
+    (ret (call string_equals end_part suffix)))
   
   (fn string_to_upper text string -> string
     (set len int (call string_length text))

@@ -15,11 +15,11 @@
   
   (fn is_ok result map -> bool
     (set ok_str string (call map_get result "ok"))
-    (ret (call string_eq ok_str "true")))
+    (ret (call string_equals ok_str "true")))
   
   (fn is_err result map -> bool
     (set ok_str string (call map_get result "ok"))
-    (set is_ok_val bool (call string_eq ok_str "true"))
+    (set is_ok_val bool (call string_equals ok_str "true"))
     (if is_ok_val
       (ret false))
     (ret true))

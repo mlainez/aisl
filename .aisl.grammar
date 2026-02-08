@@ -12,7 +12,7 @@
   (cmp eq ne lt gt le ge)
   (log and or not)
   (bit shl shr band bor bxor bnot)
-  (str concat len split trim contains replace substr)
+  (str concat len equals split trim contains replace substr)
   (regex compile match find find_all replace)
   (arr new push pop get set len slice sort filter map reduce)
   (map new get set has del keys vals len)

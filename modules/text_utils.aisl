@@ -1,13 +1,13 @@
 (module text_utils
   (fn to_uppercase_char c string -> string
     (set result string c)
-    (set is_a bool (call string_eq c "a"))
+    (set is_a bool (call string_equals c "a"))
     (if is_a
       (set result string "A"))
-    (set is_b bool (call string_eq c "b"))
+    (set is_b bool (call string_equals c "b"))
     (if is_b
       (set result string "B"))
-    (set is_c bool (call string_eq c "c"))
+    (set is_c bool (call string_equals c "c"))
     (if is_c
       (set result string "C"))
     (ret result))
@@ -70,7 +70,7 @@
     (set len_ok bool (call ge text_len prefix_len))
     (if len_ok
       (set sub string (call string_slice text 0 prefix_len))
-      (set result bool (call string_eq sub prefix)))
+      (set result bool (call string_equals sub prefix)))
     (ret result))
   
   (fn ends_with text string suffix string -> bool
@@ -81,5 +81,5 @@
     (if len_ok
       (set start int (call sub text_len suffix_len))
       (set sub string (call string_slice text start text_len))
-      (set result bool (call string_eq sub suffix)))
+      (set result bool (call string_equals sub suffix)))
     (ret result)))
