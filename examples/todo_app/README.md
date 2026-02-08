@@ -22,13 +22,8 @@ http://localhost:8080
 - Add, toggle, and delete todos
 - Data persists across server restarts
 - Modern, responsive interface
+- Starts with empty database - add your own tasks!
 - 183 lines of pure AISL code
-
-## Known Limitations
-
-- VM currently crashes when SQLite query returns empty result set
-- Workaround: App seeds one welcome task on startup (you can delete it after adding your own tasks)
-- Database persists todos between restarts, welcome message only added if not present
 
 ## Implementation
 
