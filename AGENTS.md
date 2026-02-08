@@ -480,11 +480,12 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
   (set value string (call unwrap result)))
 ```
 
-### Complete List of 11 Stdlib Modules
+### Complete List of 12 Stdlib Modules
 
-**Core (2):**
+**Core (3):**
 - `result` - Error handling (ok, err, is_ok, is_err, unwrap, unwrap_or, error_code, error_message)
 - `string_utils` - String ops (split, trim, contains, replace, starts_with, ends_with, to_upper, to_lower)
+- `conversion` - Type conversion (string_from_int, string_from_float, string_from_bool, bool_to_int, int_to_bool, kilometers_to_miles, celsius_to_fahrenheit)
 
 **Data (2):**
 - `json from data` - JSON (parse, stringify, new_object, new_array, get, set, has, delete, push, length, type)
@@ -511,6 +512,8 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 
 **Use stdlib imports for:**
 - ✅ String manipulation (split, trim, replace)
+- ✅ Type conversion (string_from_int, string_from_float, bool_to_int)
+- ✅ Unit conversion (kilometers_to_miles, celsius_to_fahrenheit)
 - ✅ JSON operations (parse, stringify)
 - ✅ Result type (error handling)
 - ✅ Base64 encoding/decoding
@@ -627,6 +630,43 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
     (ret 0)))
 ```
 
+**Pattern 5: Type Conversion and Formatting**
+
+```lisp
+(module format_example
+  (import conversion)
+  
+  (fn format_temperature celsius float -> string
+    (set fahrenheit float (call celsius_to_fahrenheit celsius))
+    (set c_str string (call string_from_float celsius))
+    (set f_str string (call string_from_float fahrenheit))
+    (set result string (call string_concat c_str "°C = "))
+    (set result string (call string_concat result f_str))
+    (set result string (call string_concat result "°F"))
+    (ret result))
+  
+  (fn build_http_response status int body string -> string
+    (set status_str string (call string_from_int status))
+    (set response string (call string_concat "HTTP/1.1 " status_str))
+    (set response string (call string_concat response " OK\r\n"))
+    (set content_len int (call string_length body))
+    (set len_str string (call string_from_int content_len))
+    (set response string (call string_concat response "Content-Length: "))
+    (set response string (call string_concat response len_str))
+    (set response string (call string_concat response "\r\n\r\n"))
+    (set response string (call string_concat response body))
+    (ret response))
+  
+  (fn main -> int
+    (set temp_str string (call format_temperature 25.0))
+    (call print temp_str)  ; Prints: 25.000°C = 77.000°F
+    
+    (set response string (call build_http_response 200 "Hello"))
+    (call print response)  ; Proper HTTP response with Content-Length
+    
+    (ret 0)))
+```
+
 ### Important Notes for LLMs
 
 1. **Always check if an operation needs an import** - If you get a "function not found" error, check if it's a stdlib function.
@@ -639,7 +679,7 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 
 4. **Function names are shorter in stdlib** - Instead of `string_split`, use `split` after importing `string_utils`.
 
-5. **Documentation location:** See `stdlib/README.md` for complete documentation of all 11 modules.
+5. **Documentation location:** See `stdlib/README.md` for complete documentation of all 12 modules.
 
 ---
 
