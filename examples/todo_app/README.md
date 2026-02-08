@@ -2,6 +2,12 @@
 
 Complete web-based TODO application with SQLite database backend, built in pure AISL.
 
+## Files
+
+- `todo_app.aisl` - AISL backend server (161 lines)
+- `index.html` - HTML/CSS/JavaScript frontend template
+- `todos.db` - SQLite database (created at runtime)
+
 ## Quick Start
 
 ```bash
@@ -23,15 +29,31 @@ http://localhost:8080
 - Data persists across server restarts
 - Modern, responsive interface
 - Starts with empty database - add your own tasks!
-- 183 lines of pure AISL code
+- Clean separation: HTML template in `index.html`, logic in AISL
+- Compact AISL backend (~120 lines)
 
 ## Implementation
 
 The application consists of:
 - SQLite database with `todos` table
 - TCP server on port 8080
-- Single-page HTML interface with embedded JavaScript
+- External HTML template (`index.html`) loaded at runtime
+- Dynamic data injection using template replacement
 - RESTful API endpoints for CRUD operations
+
+### Template System
+
+The HTML template uses a placeholder `__TODOS_DATA__` which is replaced with the actual todo JSON data at runtime:
+
+```javascript
+// In index.html
+let t=__TODOS_DATA__;
+
+// At runtime, AISL replaces this with:
+let t=[{"id":1,"text":"Buy milk","done":false}];
+```
+
+This allows easy customization of the UI without modifying AISL code.
 
 ## API Endpoints
 
