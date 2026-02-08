@@ -1,4 +1,6 @@
 (module sequential_server
+  (import string_utils)
+  
   (fn build_json_response -> string
     (ret "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 33\r\n\r\n{\"message\": \"Hello from AISL\"}"))
 
@@ -9,17 +11,14 @@
     (ret "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 49\r\n\r\n<html><body><h1>404 Not Found</h1></body></html>"))
 
   (fn handle_request request string -> string
+    (set result string (call build_404_response))
+    (set is_html bool (call string_contains request "/hello"))
+    (if is_html
+      (set result string (call build_html_response)))
     (set is_json bool (call string_contains request "/hello.json"))
     (if is_json
-      (then
-        (ret (call build_json_response)))
-      (else
-        (set is_html bool (call string_contains request "/hello"))
-        (if is_html
-          (then
-            (ret (call build_html_response)))
-          (else
-            (ret (call build_404_response)))))))
+      (set result string (call build_json_response)))
+    (ret result))
 
   (fn handle_connection client_sock string -> int
     (set request string (call tcp_receive client_sock 4096))

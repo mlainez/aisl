@@ -1,14 +1,13 @@
 (module final_server
+  (import string_utils)
+  
   (fn handle_request request string -> string
+    (set result string "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 49\r\n\r\n<html><body><h1>404 Not Found</h1></body></html>")
+    (if (call string_contains request "GET /hello ")
+      (set result string "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 43\r\n\r\n<html><body>Hello from AISL</body></html>"))
     (if (call string_contains request "GET /hello.json")
-      (then
-        (ret "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 33\r\n\r\n{\"message\": \"Hello from AISL\"}"))
-      (else
-        (if (call string_contains request "GET /hello")
-          (then
-            (ret "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 43\r\n\r\n<html><body>Hello from AISL</body></html>"))
-          (else
-            (ret "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\nContent-Length: 49\r\n\r\n<html><body><h1>404 Not Found</h1></body></html>"))))))
+      (set result string "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 33\r\n\r\n{\"message\": \"Hello from AISL\"}"))
+    (ret result))
 
   (fn handle_connection client_sock string -> int
     (set request string (call tcp_receive client_sock 4096))

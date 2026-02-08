@@ -1,4 +1,6 @@
 (module sinatra_recursive
+  (import string_utils)
+  
   (fn handle_connection client_sock string -> int
     (call print "")
     (call print "=== NEW REQUEST ===")
@@ -9,7 +11,9 @@
     (call print "Routing decision:")
     (set json_resp string "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 33\r\n\r\n{\"message\": \"Hello from AISL\"}")
     (set html_resp string "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 43\r\n\r\n<html><body>Hello from AISL</body></html>")
-    (set response string (call if_string has_json json_resp html_resp))
+    (set response string html_resp)
+    (if has_json
+      (set response string json_resp))
     (call print "Sending response:")
     (call print response)
     (call tcp_send client_sock response)

@@ -1,5 +1,6 @@
 (module echo_server
   (import string_utils)
+  (import conversion)
   
   (fn handle_connection client_sock string -> int
     (set request string (call tcp_receive client_sock 4096))
@@ -14,7 +15,7 @@
         (set path string (call array_get parts 1))))
     (set response string "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: ")
     (set path_len int (call string_length path))
-    (set path_len_str string (call string_from_i32 path_len))
+    (set path_len_str string (call string_from_int path_len))
     (set response string (call string_concat response path_len_str))
     (set response string (call string_concat response "\r\n\r\n"))
     (set response string (call string_concat response path))

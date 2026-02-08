@@ -1,0 +1,41 @@
+(module test_conversion
+  (import conversion)
+  
+  (fn test_string_from_int n int -> string
+    (ret (call string_from_int n)))
+  
+  (fn test_string_from_bool b bool -> string
+    (ret (call string_from_bool b)))
+  
+  (test-spec test_string_from_int
+    (case "converts zero"
+      (input 0)
+      (expect "0"))
+    (case "converts positive single digit"
+      (input 5)
+      (expect "5"))
+    (case "converts positive multi digit"
+      (input 42)
+      (expect "42"))
+    (case "converts large positive number"
+      (input 12345)
+      (expect "12345"))
+    (case "converts negative single digit"
+      (input -7)
+      (expect "-7"))
+    (case "converts negative multi digit"
+      (input -99)
+      (expect "-99"))
+    (case "converts large negative number"
+      (input -54321)
+      (expect "-54321")))
+  
+  (test-spec test_string_from_bool
+    (case "converts true"
+      (input true)
+      (expect "true"))
+    (case "converts false"
+      (input false)
+      (expect "false")))
+  
+  (meta-note "Tests conversion utilities: string_from_int and string_from_bool"))
