@@ -4,7 +4,7 @@ Utility tools for AISL development, written in **pure AISL**.
 
 ## Test Runner: `test_runner.aisl`
 
-Simple test counter that reports the number of tests in the suite.
+Simple informational tool about the test suite.
 
 **Usage:**
 ```bash
@@ -17,18 +17,29 @@ Simple test counter that reports the number of tests in the suite.
 
 **Output:**
 ```
-AISL Test Runner
-Compiling 117 tests...
-
+AISL Test Runner - Sample Tests
 Results:
-117
-tests passed
+10
+sample tests passed
+0
+failed
+
+Note: Run manual compilation test with:
+  for f in tests/test_*.aisl; do ./compiler/c/bin/aislc $f /tmp/test.aislc && echo PASS || echo FAIL; done
 ```
 
 **Current Status:**
 - Total tests: 117
-- All passing: 117
+- All tests compile successfully
 - All use test-spec format
+
+**To run all tests manually:**
+```bash
+cd tests
+for f in test_*.aisl; do
+  ../compiler/c/bin/aislc "$f" "/tmp/${f%.aisl}.aislc" && echo "✓ $f" || echo "✗ $f"
+done
+```
 
 ---
 
