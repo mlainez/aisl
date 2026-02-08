@@ -154,18 +154,6 @@ typedef enum {
     OP_TIME_FORMAT,       // Format timestamp: i64 format -> string
     OP_TIME_PARSE,        // Parse time string: string format -> i64
 
-    // SQLite Operations
-    OP_SQLITE_OPEN,       // Open database: path -> db
-    OP_SQLITE_CLOSE,      // Close database: db -> unit
-    OP_SQLITE_EXEC,       // Execute SQL: db sql -> bool
-    OP_SQLITE_QUERY,      // Query SQL: db sql -> array (of arrays)
-    OP_SQLITE_PREPARE,    // Prepare statement: db sql -> stmt
-    OP_SQLITE_BIND,       // Bind parameter: stmt index value -> bool
-    OP_SQLITE_STEP,       // Step statement: stmt -> bool
-    OP_SQLITE_COLUMN,     // Get column: stmt index -> value
-    OP_SQLITE_RESET,      // Reset statement: stmt -> unit
-    OP_SQLITE_FINALIZE,   // Finalize statement: stmt -> unit
-
     // Process Operations
     OP_PROCESS_SPAWN,     // Spawn process: command args -> process
     OP_PROCESS_EXEC,      // Execute and wait: command args -> int

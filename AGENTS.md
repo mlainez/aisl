@@ -485,7 +485,7 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
   (set value string (call unwrap result)))
 ```
 
-### Complete List of 12 Stdlib Modules
+### Complete List of 11 Stdlib Modules
 
 **Core (3):**
 - `result` - Error handling (ok, err, is_ok, is_err, unwrap, unwrap_or, error_code, error_message)
@@ -506,12 +506,10 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 **Crypto (1):**
 - `hash from crypto` - Hashing (sha256, md5, sha1)
 
-**Database (1):**
-- `sqlite from db` - SQLite (open, close, exec, query, prepare, bind, step, column, finalize, etc.)
-
 **System (2):**
 - `time from sys` - Time (unix_timestamp, sleep, format_time)
 - `process from sys` - Processes (spawn, wait, kill, exit, get_pid, get_env, set_env)
+
 
 ### When to Use Stdlib vs Built-in
 
@@ -525,7 +523,6 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 - ✅ HTTP request building
 - ✅ Regex operations
 - ✅ Cryptographic hashing
-- ✅ SQLite databases
 - ✅ Time operations
 - ✅ Process management
 
