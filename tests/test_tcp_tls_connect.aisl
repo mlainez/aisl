@@ -1,0 +1,25 @@
+(module test_tcp_tls_connect
+  
+  (fn test_tls_connect_google -> int
+    (set socket string (call tcp_tls_connect "www.google.com" 443))
+    (set request string "GET / HTTP/1.1\r\nHost: www.google.com\r\nConnection: close\r\n\r\n")
+    (set sent int (call tcp_send socket request))
+    (if (call lt sent 0)
+      (ret 0))
+    (set response string (call tcp_receive socket 100))
+    (call tcp_close socket)
+    (set len int (call string_length response))
+    (if (call gt len 0)
+      (ret 1))
+    (ret 0))
+  
+  (test-spec test_tls_connect_google
+    (case "connects to Google over TLS and receives HTTP response"
+      (input)
+      (expect 1)))
+  
+  (fn main -> int
+    (set result int (call test_tls_connect_google))
+    (ret result))
+  
+  (meta-note "Tests TLS connection to HTTPS endpoint"))

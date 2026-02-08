@@ -198,6 +198,7 @@ typedef enum {
     OP_TCP_LISTEN,        // Listen on port: port -> socket
     OP_TCP_ACCEPT,        // Accept connection: socket -> socket
     OP_TCP_CONNECT,       // Connect to host:port: host port -> socket
+    OP_TCP_TLS_CONNECT,   // Connect with TLS: host port -> socket
     OP_TCP_SEND,          // Send data: socket data -> int
     OP_TCP_RECEIVE,       // Receive data: socket max_bytes -> string
     OP_TCP_CLOSE,         // Close socket: socket -> unit

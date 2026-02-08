@@ -150,6 +150,9 @@ typedef struct {
     int sockfd;
     struct sockaddr_in addr;
     bool is_udp;
+    bool is_tls;
+    SSL* ssl;
+    SSL_CTX* ssl_ctx;
 } Socket;
 
 typedef struct {
@@ -1243,6 +1246,9 @@ static Socket* tcp_accept(Socket* server_sock) {
 static Socket* tcp_connect(const char* host, int port) {
     Socket* sock = malloc(sizeof(Socket));
     sock->is_udp = false;
+    sock->is_tls = false;
+    sock->ssl = NULL;
+    sock->ssl_ctx = NULL;
     
     sock->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sock->sockfd < 0) {
@@ -1271,8 +1277,50 @@ static Socket* tcp_connect(const char* host, int port) {
     return sock;
 }
 
+static Socket* tcp_tls_connect(const char* host, int port) {
+    Socket* sock = tcp_connect(host, port);
+    if (!sock) return NULL;
+    
+    sock->is_tls = true;
+    sock->ssl_ctx = SSL_CTX_new(TLS_client_method());
+    if (!sock->ssl_ctx) {
+        close(sock->sockfd);
+        free(sock);
+        return NULL;
+    }
+    
+    sock->ssl = SSL_new(sock->ssl_ctx);
+    if (!sock->ssl) {
+        SSL_CTX_free(sock->ssl_ctx);
+        close(sock->sockfd);
+        free(sock);
+        return NULL;
+    }
+    
+    if (SSL_set_fd(sock->ssl, sock->sockfd) != 1) {
+        SSL_free(sock->ssl);
+        SSL_CTX_free(sock->ssl_ctx);
+        close(sock->sockfd);
+        free(sock);
+        return NULL;
+    }
+    
+    if (SSL_connect(sock->ssl) != 1) {
+        SSL_free(sock->ssl);
+        SSL_CTX_free(sock->ssl_ctx);
+        close(sock->sockfd);
+        free(sock);
+        return NULL;
+    }
+    
+    return sock;
+}
+
 static int tcp_send(Socket* sock, const char* data) {
     if (!sock) return -1;
+    if (sock->is_tls) {
+        return SSL_write(sock->ssl, data, strlen(data));
+    }
     return send(sock->sockfd, data, strlen(data), 0);
 }
 
@@ -1280,7 +1328,13 @@ static char* tcp_receive(Socket* sock, int max_bytes) {
     if (!sock) return strdup("");
     
     char* buffer = malloc(max_bytes + 1);
-    ssize_t n = recv(sock->sockfd, buffer, max_bytes, 0);
+    ssize_t n;
+    
+    if (sock->is_tls) {
+        n = SSL_read(sock->ssl, buffer, max_bytes);
+    } else {
+        n = recv(sock->sockfd, buffer, max_bytes, 0);
+    }
     
     if (n < 0) {
         free(buffer);
@@ -1293,6 +1347,11 @@ static char* tcp_receive(Socket* sock, int max_bytes) {
 
 static void tcp_close(Socket* sock) {
     if (!sock) return;
+    if (sock->is_tls) {
+        SSL_shutdown(sock->ssl);
+        SSL_free(sock->ssl);
+        SSL_CTX_free(sock->ssl_ctx);
+    }
     close(sock->sockfd);
     free(sock);
 }
@@ -1300,6 +1359,9 @@ static void tcp_close(Socket* sock) {
 static Socket* udp_socket() {
     Socket* sock = malloc(sizeof(Socket));
     sock->is_udp = true;
+    sock->is_tls = false;
+    sock->ssl = NULL;
+    sock->ssl_ctx = NULL;
     
     sock->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock->sockfd < 0) {
@@ -3423,6 +3485,18 @@ int vm_run(VM* vm) {
                 Value host_val = pop(vm);
                 int port = port_val.data.i32_val;
                 Socket* sock = tcp_connect(host_val.data.string_val, port);
+                free(host_val.data.string_val);
+                Value result = {.type = VAL_TCP_SOCKET, .data.ptr_val = sock};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_TCP_TLS_CONNECT: {
+                Value port_val = pop(vm);
+                Value host_val = pop(vm);
+                int port = port_val.data.i32_val;
+                Socket* sock = tcp_tls_connect(host_val.data.string_val, port);
                 free(host_val.data.string_val);
                 Value result = {.type = VAL_TCP_SOCKET, .data.ptr_val = sock};
                 push(vm, result);

@@ -1922,6 +1922,15 @@ void compile_apply(Compiler* comp, Expr* expr) {
         bytecode_emit(comp->program, inst);
         return;
     }
+    if (strcmp(name, "tcp_tls_connect") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "tcp_tls_connect expects 2 arguments (host, port)\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_TCP_TLS_CONNECT};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
     if (strcmp(name, "tcp_send") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
             fprintf(stderr, "tcp_send expects 2 arguments (socket, data)\n");
