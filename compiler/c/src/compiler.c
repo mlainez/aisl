@@ -2187,12 +2187,24 @@ static void compile_imported_module(Compiler* comp, const char* module_name) {
         return;  // Already compiled
     }
     
-    // Load module (finds .aisl file in search paths)
-    loaded = module_load(comp->module_cache, module_name);
-    if (!loaded) {
-        fprintf(stderr, "Error: Cannot load module '%s'\n", module_name);
+    // Check for circular import
+    if (loaded && loaded->is_compiling) {
+        fprintf(stderr, "Error: Circular import detected for module '%s'\n", module_name);
+        fprintf(stderr, "Module is currently being compiled and imports itself (directly or indirectly)\n");
         exit(1);
     }
+    
+    // Load module (finds .aisl file in search paths)
+    if (!loaded) {
+        loaded = module_load(comp->module_cache, module_name);
+        if (!loaded) {
+            fprintf(stderr, "Error: Cannot load module '%s'\n", module_name);
+            exit(1);
+        }
+    }
+    
+    // Mark as compiling (circular import detection)
+    loaded->is_compiling = true;
     
     // Read and parse the module file
     FILE* f = fopen(loaded->module_path, "r");
@@ -2231,8 +2243,8 @@ static void compile_imported_module(Compiler* comp, const char* module_name) {
     
     // Recursively compile its imports first
     for (int i = 0; i < imported_module->import_count; i++) {
-        // Recursive import handling - TODO
-        (void)i;  // Suppress unused warning for now
+        Import* imp = imported_module->imports[i];
+        compile_imported_module(comp, imp->module_name);
     }
     
     // Compile the imported module's functions
@@ -2260,6 +2272,9 @@ static void compile_imported_module(Compiler* comp, const char* module_name) {
         }
         current = current->next;
     }
+    
+    // Mark as done compiling
+    loaded->is_compiling = false;
     
     // Note: Don't free source - it's stored in loaded->source for AST pointers
 }

@@ -170,6 +170,7 @@ LoadedModule* module_load(ModuleCache* cache, const char* module_name) {
     module->module_path = module_path;
     module->parsed_module = NULL;
     module->source = NULL;  // Will be set when compiling
+    module->is_compiling = false;  // Not compiling yet
     
     // Check for manifest
     module->manifest_path = malloc(strlen(module_path) + 10);

@@ -13,6 +13,7 @@ typedef struct {
     bool has_manifest;           // Whether manifest exists
     void* parsed_module;         // Module* after compilation
     char* source;                // Source code buffer (kept alive for AST)
+    bool is_compiling;           // True if currently being compiled (circular import detection)
 } LoadedModule;
 
 typedef struct {
