@@ -1400,60 +1400,6 @@ void compile_apply(Compiler* comp, Expr* expr) {
     // HTTP Operations
     // ============================================
     
-    if (strcmp(name, "http_get") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "http_get expects 1 argument (url string)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_HTTP_GET};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "http_get_status") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "http_get_status expects 1 argument (response)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_HTTP_GET_STATUS};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "http_get_body") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "http_get_body expects 1 argument (response)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_HTTP_GET_BODY};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "http_post") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "http_post expects 2 arguments (url, body)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_HTTP_POST};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "http_put") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "http_put expects 2 arguments (url, body)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_HTTP_PUT};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "http_delete") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "http_delete expects 1 argument (url)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_HTTP_DELETE};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
     
     if (strcmp(name, "file_read") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 1) {
@@ -1786,42 +1732,6 @@ void compile_apply(Compiler* comp, Expr* expr) {
     // WEBSOCKET OPERATIONS
     // ============================================
     
-    if (strcmp(name, "ws_connect") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "ws_connect expects 1 argument (url)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_WS_CONNECT};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "ws_send") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "ws_send expects 2 arguments (ws, message)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_WS_SEND};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "ws_receive") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "ws_receive expects 1 argument (ws)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_WS_RECEIVE};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "ws_close") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "ws_close expects 1 argument (ws)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_WS_CLOSE};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
     
     // ============================================
     // PROCESS MANAGEMENT OPERATIONS

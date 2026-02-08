@@ -22,8 +22,6 @@ typedef enum {
     VAL_ARRAY,
     VAL_MAP,
     VAL_JSON,
-    VAL_HTTP_RESPONSE,
-    VAL_WEBSOCKET,
     VAL_REGEX,
     VAL_FILE_HANDLE,
     VAL_SQLITE_DB,

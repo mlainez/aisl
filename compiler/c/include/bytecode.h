@@ -125,23 +125,6 @@ typedef enum {
     OP_FILE_WRITE_RESULT, // Write file with error handling: path content -> result
     OP_FILE_APPEND_RESULT,// Append with error handling: path content -> result
 
-    // HTTP Client Operations
-    OP_HTTP_GET,          // HTTP GET request: url -> response
-    OP_HTTP_POST,         // HTTP POST request: url body -> response
-    OP_HTTP_PUT,          // HTTP PUT request: url body -> response
-    OP_HTTP_DELETE,       // HTTP DELETE request: url -> response
-    OP_HTTP_REQUEST,      // Generic HTTP request: method url headers body -> response
-    OP_HTTP_GET_STATUS,   // Get HTTP response status code: response -> int
-    OP_HTTP_GET_BODY,     // Get HTTP response body: response -> string
-    OP_HTTP_GET_HEADER,   // Get HTTP response header: response key -> string
-    OP_HTTP_SET_HEADER,   // Set HTTP request header: method url key value -> response
-
-    // WebSocket Operations
-    OP_WS_CONNECT,        // Connect to WebSocket: url -> websocket
-    OP_WS_SEND,           // Send message: websocket message -> bool
-    OP_WS_RECEIVE,        // Receive message: websocket -> string
-    OP_WS_CLOSE,          // Close WebSocket: websocket -> unit
-
     // File System Operations
     OP_FILE_READ,         // Read file contents: path -> string
     OP_FILE_WRITE,        // Write file contents: path content -> bool

@@ -203,7 +203,6 @@ Obj* gc_alloc_object(VM* vm, ObjType type, size_t size) {
 
 void gc_mark_value(Value val) {
     if (val.type == VAL_ARRAY || val.type == VAL_MAP || val.type == VAL_JSON ||
-        val.type == VAL_HTTP_RESPONSE || val.type == VAL_WEBSOCKET ||
         val.type == VAL_REGEX || val.type == VAL_SQLITE_DB || 
         val.type == VAL_SQLITE_STMT || val.type == VAL_PROCESS ||
         val.type == VAL_TCP_SOCKET || val.type == VAL_UDP_SOCKET ||
@@ -2617,68 +2616,16 @@ int vm_run(VM* vm) {
             // JSON operations (OP_JSON_PARSE, OP_JSON_STRINGIFY, etc.) REMOVED
             // Now implemented in stdlib/data/json.aisl using map primitives
 
-            case OP_HTTP_GET: {
-                Value url_val = pop(vm);
-                HttpResponse* resp = http_get(url_val.data.string_val);
-                free(url_val.data.string_val);
-                Value result = {.type = VAL_HTTP_RESPONSE, .data.ptr_val = resp};
-                push(vm, result);
-                vm->ip++;
-                break;
-            }
+            // ============================================
+            // HTTP OPERATIONS
+            // ============================================
 
-            case OP_HTTP_GET_STATUS: {
-                Value resp_val = pop(vm);
-                HttpResponse* resp = (HttpResponse*)resp_val.data.ptr_val;
-                Value result = {.type = VAL_I32, .data.i32_val = resp->status_code};
-                push(vm, result);
-                vm->ip++;
-                break;
-            }
+            // HTTP operations (OP_HTTP_GET, OP_HTTP_POST, etc.) REMOVED
+            // Now implemented in stdlib/net/http.aisl using TCP/TLS primitives
 
-            case OP_HTTP_GET_BODY: {
-                Value resp_val = pop(vm);
-                HttpResponse* resp = (HttpResponse*)resp_val.data.ptr_val;
-                char* body = resp->body ? strdup(resp->body) : strdup("");
-                Value result = {.type = VAL_STRING, .data.string_val = body};
-                push(vm, result);
-                vm->ip++;
-                break;
-            }
-
-            case OP_HTTP_POST: {
-                Value body_val = pop(vm);
-                Value url_val = pop(vm);
-                HttpResponse* resp = http_post(url_val.data.string_val, body_val.data.string_val);
-                free(url_val.data.string_val);
-                free(body_val.data.string_val);
-                Value result = {.type = VAL_HTTP_RESPONSE, .data.ptr_val = resp};
-                push(vm, result);
-                vm->ip++;
-                break;
-            }
-
-            case OP_HTTP_PUT: {
-                Value body_val = pop(vm);
-                Value url_val = pop(vm);
-                HttpResponse* resp = http_put(url_val.data.string_val, body_val.data.string_val);
-                free(url_val.data.string_val);
-                free(body_val.data.string_val);
-                Value result = {.type = VAL_HTTP_RESPONSE, .data.ptr_val = resp};
-                push(vm, result);
-                vm->ip++;
-                break;
-            }
-
-            case OP_HTTP_DELETE: {
-                Value url_val = pop(vm);
-                HttpResponse* resp = http_delete(url_val.data.string_val);
-                free(url_val.data.string_val);
-                Value result = {.type = VAL_HTTP_RESPONSE, .data.ptr_val = resp};
-                push(vm, result);
-                vm->ip++;
-                break;
-            }
+            // ============================================
+            // FILE OPERATIONS
+            // ============================================
 
             case OP_FILE_READ: {
                 Value path_val = pop(vm);
@@ -3365,52 +3312,6 @@ int vm_run(VM* vm) {
                 Value unit = {.type = VAL_UNIT};
                 push(vm, unit);
 #endif
-                vm->ip++;
-                break;
-            }
-
-            // ============================================
-            // WEBSOCKET OPERATIONS
-            // ============================================
-
-            case OP_WS_CONNECT: {
-                Value url_val = pop(vm);
-                WebSocket* ws = ws_connect(url_val.data.string_val);
-                free(url_val.data.string_val);
-                Value result = {.type = VAL_WEBSOCKET, .data.ptr_val = ws};
-                push(vm, result);
-                vm->ip++;
-                break;
-            }
-
-            case OP_WS_SEND: {
-                Value message_val = pop(vm);
-                Value ws_val = pop(vm);
-                WebSocket* ws = (WebSocket*)ws_val.data.ptr_val;
-                int result = ws_send(ws, message_val.data.string_val);
-                free(message_val.data.string_val);
-                Value result_val = {.type = VAL_I32, .data.i32_val = result};
-                push(vm, result_val);
-                vm->ip++;
-                break;
-            }
-
-            case OP_WS_RECEIVE: {
-                Value ws_val = pop(vm);
-                WebSocket* ws = (WebSocket*)ws_val.data.ptr_val;
-                char* message = ws_receive(ws);
-                Value result = {.type = VAL_STRING, .data.string_val = message};
-                push(vm, result);
-                vm->ip++;
-                break;
-            }
-
-            case OP_WS_CLOSE: {
-                Value ws_val = pop(vm);
-                WebSocket* ws = (WebSocket*)ws_val.data.ptr_val;
-                ws_close(ws);
-                Value unit = {.type = VAL_UNIT};
-                push(vm, unit);
                 vm->ip++;
                 break;
             }

@@ -1,13 +1,169 @@
 (module websocket
+  
+  (fn string_from_int n int -> string
+    (set is_negative bool (call lt n 0))
+    (set abs_n int n)
+    (if is_negative
+      (set abs_n int (call sub 0 n)))
+    
+    (set is_zero bool (call eq abs_n 0))
+    (if is_zero
+      (ret "0"))
+    
+    (set digits array (call array_new 32))
+    (set remaining int abs_n)
+    
+    (while (call gt remaining 0)
+      (set digit int (call mod remaining 10))
+      (set remaining int (call div remaining 10))
+      
+      (set digit_char string "0")
+      (if (call eq digit 1) (set digit_char string "1"))
+      (if (call eq digit 2) (set digit_char string "2"))
+      (if (call eq digit 3) (set digit_char string "3"))
+      (if (call eq digit 4) (set digit_char string "4"))
+      (if (call eq digit 5) (set digit_char string "5"))
+      (if (call eq digit 6) (set digit_char string "6"))
+      (if (call eq digit 7) (set digit_char string "7"))
+      (if (call eq digit 8) (set digit_char string "8"))
+      (if (call eq digit 9) (set digit_char string "9"))
+      
+      (call array_push digits digit_char))
+    
+    (set result string "")
+    (set len int (call array_length digits))
+    (set i int (call sub len 1))
+    
+    (while (call ge i 0)
+      (set digit_str string (call array_get digits i))
+      (set result string (call string_concat result digit_str))
+      (set i int (call sub i 1)))
+    
+    (if is_negative
+      (set result string (call string_concat "-" result)))
+    
+    (ret result))
+  
+  (fn parse_ws_url url string -> array
+    (set arr array (call array_new 4))
+    
+    (set is_wss bool (call string_eq (call string_slice url 0 6) "wss://"))
+    (set is_ws bool (call string_eq (call string_slice url 0 5) "ws://"))
+    
+    (if is_wss
+      (call array_push arr "wss")
+      (call array_push arr "ws"))
+    
+    (set url_no_proto string url)
+    (if is_wss
+      (set url_no_proto string (call string_slice url 6 (call string_length url))))
+    (if is_ws
+      (set url_no_proto string (call string_slice url 5 (call string_length url))))
+    
+    (set slash_pos int -1)
+    (set i int 0)
+    (set url_len int (call string_length url_no_proto))
+    (while (call lt i url_len)
+      (set ch string (call string_slice url_no_proto i (call add i 1)))
+      (set is_slash bool (call string_eq ch "/"))
+      (if is_slash
+        (set slash_pos int i)
+        (break))
+      (set i int (call add i 1)))
+    
+    (set host string url_no_proto)
+    (set path string "/")
+    (if (call ge slash_pos 0)
+      (set host string (call string_slice url_no_proto 0 slash_pos))
+      (set path string (call string_slice url_no_proto slash_pos url_len)))
+    
+    (call array_push arr host)
+    
+    (set port int 80)
+    (if is_wss
+      (set port int 443))
+    (call array_push arr port)
+    
+    (call array_push arr path)
+    (ret arr))
+  
+  (fn build_handshake host string path string -> string
+    (set req string "GET ")
+    (set req string (call string_concat req path))
+    (set req string (call string_concat req " HTTP/1.1\r\n"))
+    (set req string (call string_concat req "Host: "))
+    (set req string (call string_concat req host))
+    (set req string (call string_concat req "\r\n"))
+    (set req string (call string_concat req "Upgrade: websocket\r\n"))
+    (set req string (call string_concat req "Connection: Upgrade\r\n"))
+    (set req string (call string_concat req "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"))
+    (set req string (call string_concat req "Sec-WebSocket-Version: 13\r\n\r\n"))
+    (ret req))
+  
+  (fn encode_frame message string -> string
+    (set msg_len int (call string_length message))
+    
+    (set frame string "\x81")
+    
+    (set masked_len int (call add msg_len 128))
+    (set len_byte string "")
+    
+    (if (call lt msg_len 126)
+      (set len_byte string (call string_slice "                                                                                                                                " masked_len (call add masked_len 1))))
+    
+    (set frame string (call string_concat frame len_byte))
+    
+    (set mask string "\x00\x00\x00\x00")
+    (set frame string (call string_concat frame mask))
+    (set frame string (call string_concat frame message))
+    
+    (ret frame))
+  
   (fn connect url string -> string
-    (ret (call ws_connect url)))
+    (set parts array (call parse_ws_url url))
+    (set protocol string (call array_get parts 0))
+    (set host string (call array_get parts 1))
+    (set port int (call array_get parts 2))
+    (set path string (call array_get parts 3))
+    
+    (set is_wss bool (call string_eq protocol "wss"))
+    (set socket string "")
+    (if is_wss
+      (set socket string (call tcp_tls_connect host port))
+      (set socket string (call tcp_connect host port)))
+    
+    (set handshake string (call build_handshake host path))
+    (call tcp_send socket handshake)
+    
+    (set response string (call tcp_receive socket 4096))
+    
+    (ret socket))
   
   (fn send ws string message string -> bool
-    (ret (call ws_send ws message)))
+    (set frame string (call encode_frame message))
+    (call tcp_send ws frame)
+    (ret true))
   
   (fn receive ws string -> string
-    (ret (call ws_receive ws)))
+    (set data string (call tcp_receive ws 4096))
+    
+    (set data_len int (call string_length data))
+    (if (call lt data_len 2)
+      (ret ""))
+    
+    (set payload_start int 2)
+    (set masked bool (call ge (call string_length (call string_slice data 1 2)) 128))
+    (if masked
+      (set payload_start int (call add payload_start 4)))
+    
+    (if (call lt data_len payload_start)
+      (ret ""))
+    
+    (set payload string (call string_slice data payload_start data_len))
+    (ret payload))
   
   (fn close ws string -> int
-    (call ws_close ws)
-    (ret 0)))
+    (call tcp_close ws)
+    (ret 0))
+  
+  (meta-note "Pure AISL WebSocket client using TCP/TLS primitives - simplified implementation without full RFC 6455 compliance"))
