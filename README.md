@@ -272,7 +272,7 @@ See [examples/](examples/) for 17 complete working examples.
 
 ## Testing
 
-AISL has a built-in test framework. All 120 tests use the `test-spec` structure:
+AISL has **117 passing tests** covering all language features. All tests use the `test-spec` structure:
 
 ```lisp
 (module test_addition
@@ -334,7 +334,7 @@ aisl/
 │   ├── db/                     # Databases (sqlite)
 │   └── README.md               # Stdlib documentation
 │
-├── tests/                      # Test suite (120 tests, 100% coverage)
+├── tests/                      # Test suite (117 tests, all passing)
 │   ├── test_*.aisl             # Unit tests
 │   └── README.md
 │

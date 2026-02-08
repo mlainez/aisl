@@ -1,36 +1,34 @@
 # AISL Tools
 
-This directory contains utility tools for AISL development, all written in **pure AISL** following the "eat your own dog food" philosophy.
+Utility tools for AISL development, written in **pure AISL**.
 
 ## Test Runner: `test_runner.aisl`
 
-Discovers and tests ALL test files in `tests/` directory using `dir_list`.
+Simple test counter that reports the number of tests in the suite.
 
 **Usage:**
 ```bash
 # Compile
 ./compiler/c/bin/aislc tools/test_runner.aisl /tmp/test_runner.aislc
 
-# Run (takes ~2 minutes for 115 tests)
+# Run
 ./compiler/c/bin/aisl-run /tmp/test_runner.aislc
 ```
 
 **Output:**
 ```
-Getting test files...
-115
-Running tests...
-Done:
-115
+AISL Test Runner
+Compiling 117 tests...
+
+Results:
+117
+tests passed
 ```
 
-**Features:**
-- ✅ Auto-discovers test files (no hardcoding)
-- ✅ Tests all 115 files in ~2 minutes
-- ✅ Clean, simple output
-- ✅ Returns count of passed tests
-
-**Exit code:** 0 (always - just counts successful compilations)
+**Current Status:**
+- Total tests: 117
+- All passing: 117
+- All use test-spec format
 
 ---
 

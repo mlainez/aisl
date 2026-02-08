@@ -1,4 +1,5 @@
 @(grammar aisl-agent)
+@(stat tests:117 passing:117 examples:17 stdlib:11)
 @(syn
   (prog (module name imp* fn*))
   (imp (import name))
