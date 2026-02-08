@@ -47,10 +47,10 @@ Type* parser_parse_type(Parser* parser) {
     switch (tok.kind) {
         case TOK_TYPE_INT:
             parser_advance(parser);
-            return type_i64();  // int maps to i64
+            return type_int();  // int maps to i64
         case TOK_TYPE_FLOAT:
             parser_advance(parser);
-            return type_f64();  // float maps to f64
+            return type_float();  // float maps to f64
         case TOK_TYPE_STRING:
             parser_advance(parser);
             return type_string();

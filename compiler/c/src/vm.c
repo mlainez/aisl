@@ -1109,7 +1109,7 @@ int vm_run(VM* vm) {
             }
 
 
-            case OP_PUSH_F64:
+            
             case OP_PUSH_FLOAT: {
                 Value val = {.type = VAL_F64, .data.f64_val = inst.operand.float_val};
                 push(vm, val);

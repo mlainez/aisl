@@ -8,10 +8,8 @@
 
 typedef enum {
     // Stack operations (v6.0 - simplified to int/float only)
-    OP_PUSH_INT,      // Push integer constant (i64)
-    OP_PUSH_I64,      // Alias for OP_PUSH_INT (backward compat)
-    OP_PUSH_FLOAT,    // Push float constant (f64)
-    OP_PUSH_F64,      // Alias for OP_PUSH_FLOAT (backward compat)
+    OP_PUSH_INT,      // Push integer constant (64-bit)
+    OP_PUSH_FLOAT,    // Push float constant (64-bit)
     OP_PUSH_STRING,   // Push string constant
     OP_PUSH_BOOL,     // Push boolean constant
     OP_PUSH_UNIT,     // Push unit value

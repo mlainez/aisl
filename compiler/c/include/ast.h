@@ -389,10 +389,6 @@ Type* type_array(Type* element);
 Type* type_map(Type* key, Type* value);
 Type* type_json();
 
-// Internal aliases for backward compatibility
-Type* type_i64();  // Maps to TYPE_INT
-Type* type_f64();  // Maps to TYPE_FLOAT
-
 Expr* expr_lit_int(int64_t val);
 Expr* expr_lit_float(double val);
 Expr* expr_lit_string(const char* val);

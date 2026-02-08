@@ -289,17 +289,17 @@ Many high-level operations are now implemented in **pure AISL stdlib modules** i
 
 ```scheme
 (module my_program
-  (import result)                    ; Import from stdlib/core/result.aisl
-  (import json)                      ; Import from stdlib/data/json.aisl
-  (import regex from pattern)        ; Import from stdlib/pattern/regex.aisl
+  (import result)     ; Import from stdlib/core/result.aisl
+  (import json_utils) ; Import from stdlib/data/json_utils.aisl
+  (import regex)      ; Import from stdlib/pattern/regex.aisl
   
   (fn main -> int
     ; Use imported functions
     (set result_val result (call ok "success!"))
     (set is_success bool (call is_ok result_val))
     
-    (set json_obj json (call new_object))
-    (call set json_obj "status" "ok")
+    (set json_obj json (call json_new_object))
+    (call json_set json_obj "status" "ok")
     
     (ret 0)))
 ```
@@ -549,7 +549,7 @@ Some file operations have `_result` variants that return Result instead of panic
 
 ### JSON Operations
 
-**All JSON operations require `(import json)` from stdlib:**
+**All JSON operations require `(import json_utils)` from stdlib:**
 
 ```scheme
 (call parse text)                    ; Parse JSON string -> json
@@ -568,20 +568,20 @@ Some file operations have `_result` variants that return Result instead of panic
 **Example:**
 ```scheme
 (module json_demo
-  (import json from data)
+  (import json_utils)
   
   (fn main -> int
     ; Parse JSON
     (set json_str string "{\"name\":\"Alice\",\"age\":30}")
-    (set obj json (call parse json_str))
+    (set obj json (call json_parse json_str))
     
     ; Modify JSON
-    (set new_obj json (call new_object))
-    (call set new_obj "status" "active")
-    (call set new_obj "count" "42")
+    (set new_obj json (call json_new_object))
+    (call json_set new_obj "status" "active")
+    (call json_set new_obj "count" "42")
     
     ; Convert back to string
-    (set result string (call stringify new_obj))
+    (set result string (call json_stringify new_obj))
     (call print result)                ; Prints: {"status":"active","count":"42"}
     
     (ret 0)))

@@ -237,7 +237,7 @@ void compile_lit_string(Compiler* comp, Expr* expr) {
 void compile_lit_float(Compiler* comp, Expr* expr) {
     // For now, use F64 for all float literals
     Instruction inst = {
-        .opcode = OP_PUSH_F64,
+        .opcode = OP_PUSH_FLOAT,
         .operand.float_val = expr->data.float_val
     };
     bytecode_emit(comp->program, inst);

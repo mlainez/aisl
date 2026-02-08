@@ -50,16 +50,6 @@ Type* type_float() {
     return type_new(TYPE_FLOAT);
 }
 
-// Internal aliases - i64/f64 map to int/float
-// These exist for backward compatibility with parser/compiler
-Type* type_i64() {
-    return type_new(TYPE_INT);  // int is always i64
-}
-
-Type* type_f64() {
-    return type_new(TYPE_FLOAT);  // float is always f64
-}
-
 Type* type_array(Type* element) {
     Type* t = type_new(TYPE_ARRAY);
     t->data.generic.element_type = element;
@@ -99,7 +89,7 @@ Expr* expr_lit_string(const char* val) {
 }
 
 Expr* expr_lit_float(double val) {
-    Expr* e = expr_new(EXPR_LIT_FLOAT, type_f64());
+    Expr* e = expr_new(EXPR_LIT_FLOAT, type_float());
     e->data.float_val = val;
     return e;
 }
