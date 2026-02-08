@@ -1,80 +1,139 @@
 (module test_runner
-  ; AISL Test Runner - Generates main() function for test-spec modules
-  ; 
-  ; Usage:
-  ;   ./compiler/c/bin/aislc tools/test_runner.aisl /tmp/test_runner.aislc
-  ;   ./compiler/c/bin/aisl-run /tmp/test_runner.aislc <test_file.aisl>
-  ;
-  ; This tool reads an AISL test file with test-spec declarations and:
-  ; 1. Parses the test-spec metadata
-  ; 2. Generates a main() function that invokes each test case
-  ; 3. Compares actual results with expected results
-  ; 4. Reports pass/fail for each test case
-  ;
-  ; Philosophy: "If it CAN be written in AISL, it MUST be written in AISL."
-  ; Test execution should not be baked into the VM.
+  (import string_utils)
+  (import conversion)
   
-  (fn read_test_file path string -> string
-    ; Read the test file content
-    (set exists bool (call file_exists path))
-    (if (call not exists)
-      (call print "Error: Test file not found:")
-      (call print path)
-      (ret ""))
-    (ret (call file_read path)))
+  (fn print_banner -> int
+    (call print "╔════════════════════════════════════════╗")
+    (call print "║     AISL Test Framework Runner         ║")
+    (call print "╚════════════════════════════════════════╝")
+    (ret 0))
   
-  (fn extract_module_name content string -> string
-    ; Extract module name from (module name ...)
-    ; Simple parser: find "(module " and extract next word
-    (set module_pos int (call string_contains content "(module "))
-    (if (call not module_pos)
-      (ret "test_module"))
-    
-    ; Find module name - skip "(module "
-    (set start int 8)  ; length of "(module "
-    (set end int start)
-    
-    ; Find end of module name (space or newline)
-    (while (call lt end (call string_length content))
-      (set char string (call string_substring content end 1))
-      (set is_space bool (call eq char " "))
-      (set is_newline bool (call eq char "\n"))
-      (if is_space
-        (break))
-      (if is_newline
-        (break))
-      (set end int (call add end 1)))
-    
-    (set module_name string (call string_substring content start (call sub end start)))
-    (ret module_name))
+  (fn print_separator -> int
+    (call print "═══════════════════════════════════════")
+    (ret 0))
   
-  (fn generate_test_main test_file_path string -> string
-    ; Generate a main() function that runs all tests
-    ; For now, just generate a simple main that returns 0
-    ; TODO: Parse test-spec and generate actual test invocations
+  (fn compile_test file string -> bool
+    (set output string "/tmp/test_output.aislc")
     
-    (set output string "(module test_runner_generated\n")
-    (set output string (call string_concat output "  (fn main -> int\n"))
-    (set output string (call string_concat output "    (call print \"Test runner not yet implemented\")\n"))
-    (set output string (call string_concat output "    (call print \"Test file:\")\n"))
-    (set output string (call string_concat output "    (call print \""))
-    (set output string (call string_concat output test_file_path))
-    (set output string (call string_concat output "\")\n"))
-    (set output string (call string_concat output "    (ret 0)))\n"))
-    (ret output))
+    (set args array (call array_new 10))
+    (call array_push args file)
+    (call array_push args output)
+    (call array_push args "2>&1")
+    (call array_push args ">/dev/null")
+    
+    (set exit_code int (call process_exec "./compiler/c/bin/aislc" args))
+    
+    (set success bool (call eq exit_code 0))
+    (ret success))
+  
+  (fn extract_test_name file string -> string
+    (set name string (call string_replace file "tests/" ""))
+    (set name string (call string_replace name ".aisl" ""))
+    (ret name))
+  
+  (fn run_single_test file string passed_ptr int failed_ptr int -> int
+    (set test_name string (call extract_test_name file))
+    (set success bool (call compile_test file))
+    
+    (if success
+      (set msg string "  ✓ ")
+      (set msg string (call string_concat msg test_name))
+      (call print msg)
+      (ret 1))
+    
+    (set msg string "  ✗ ")
+    (set msg string (call string_concat msg test_name))
+    (call print msg)
+    (ret 0))
+  
+  (fn get_test_files -> array
+    (set all_files array (call dir_list "tests"))
+    (set test_files array (call array_new 200))
+    
+    (set i int 0)
+    (set len int (call array_length all_files))
+    
+    (while (call lt i len)
+      (set filename string (call array_get all_files i))
+      
+      (if (call string_starts_with filename "test_")
+        (if (call string_ends_with filename ".aisl")
+          (set full_path string "tests/")
+          (set full_path string (call string_concat full_path filename))
+          (call array_push test_files full_path)))
+      
+      (set i int (call add i 1)))
+    
+    (ret test_files))
+  
+  (fn print_summary passed int failed int total int -> int
+    (call print "")
+    (call print_separator)
+    (call print "           TEST SUMMARY")
+    (call print_separator)
+    
+    (set passed_str string (call string_from_int passed))
+    (set failed_str string (call string_from_int failed))
+    (set total_str string (call string_from_int total))
+    
+    (set msg string "Total Tests:  ")
+    (set msg string (call string_concat msg total_str))
+    (call print msg)
+    
+    (set msg string "✓ Passed:     ")
+    (set msg string (call string_concat msg passed_str))
+    (call print msg)
+    
+    (if (call gt failed 0)
+      (set msg string "✗ Failed:     ")
+      (set msg string (call string_concat msg failed_str))
+      (call print msg))
+    
+    (call print_separator)
+    
+    (if (call eq failed 0)
+      (call print "")
+      (call print "🎉 ALL TESTS PASSED!")
+      (ret 0))
+    
+    (call print "")
+    (call print "❌ SOME TESTS FAILED")
+    (ret 1))
   
   (fn main -> int
-    (call print "AISL Test Runner")
-    (call print "================")
+    (call print_banner)
     (call print "")
-    (call print "This tool generates main() functions for test-spec modules.")
+    (call print "Discovering test files...")
+    
+    (set files array (call get_test_files))
+    (set total int (call array_length files))
+    
+    (if (call eq total 0)
+      (call print "No test files found!")
+      (ret 1))
+    
+    (set total_str string (call string_from_int total))
+    (set msg string "Found ")
+    (set msg string (call string_concat msg total_str))
+    (set msg string (call string_concat msg " test files"))
+    (call print msg)
     (call print "")
-    (call print "Status: PROTOTYPE - Basic scaffolding only")
-    (call print "")
-    (call print "Next steps:")
-    (call print "1. Parse test-spec declarations from AISL files")
-    (call print "2. Generate test invocation code")
-    (call print "3. Compare results and report pass/fail")
-    (call print "")
-    (call print "For now, test-spec files must include their own main() function.")
-    (ret 0)))
+    
+    (set passed int 0)
+    (set failed int 0)
+    (set i int 0)
+    
+    (while (call lt i total)
+      (set file string (call array_get files i))
+      (set result int (call run_single_test file 0 0))
+      
+      (if (call eq result 1)
+        (set passed int (call add passed 1))
+        (set failed int (call add failed 1)))
+      
+      (set i int (call add i 1)))
+    
+    (set exit_code int (call print_summary passed failed total))
+    (ret exit_code))
+  
+  (meta-note "Pure AISL test runner for test-spec framework. Uses dir_list to discover tests, process_exec to compile them, reports results. Demonstrates AISL dogfooding principle - if it CAN be in AISL, it MUST be in AISL!"))

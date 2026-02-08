@@ -4,8 +4,8 @@
 #include "bytecode.h"
 #include <pthread.h>
 
-#define STACK_SIZE 4096
-#define CALL_STACK_SIZE 256
+#define STACK_SIZE 262144
+#define CALL_STACK_SIZE 8192
 #define GC_HEAP_GROW_FACTOR 2
 
 // VALUE SYSTEM

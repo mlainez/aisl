@@ -2518,11 +2518,20 @@ int vm_run(VM* vm) {
                 }
                 args[args_arr->count + 1] = NULL;
                 
-                execvp(cmd_val.data.string_val, (char* const*)args);
+                // Fork, exec, and wait for completion
+                Process* proc = process_spawn(cmd_val.data.string_val, args);
+                int exit_code = 0;
+                if (proc) {
+                    exit_code = process_wait(proc);
+                } else {
+                    exit_code = -1;
+                }
                 
-                // If exec returns, it failed
-                fprintf(stderr, "execvp failed: %s\n", strerror(errno));
-                exit(1);
+                free(args);
+                
+                Value result = {.type = VAL_INT, .data.int_val = exit_code};
+                push(vm, result);
+                vm->ip++;
                 break;
             }
 
