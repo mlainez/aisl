@@ -128,7 +128,7 @@ Not "both syntaxes work", not "old is deprecated" - ONE canonical form, period.
 Examples:
 - Function params: `a int b int` (NOT `((a int) (b int))`)
 - Module keyword: `module` (NOT `mod` - conflicts with modulo)
-- Explicit call: `(call add a b)` (NOT implicit `(add a b)`)
+- Explicit call: `(add a b)` (NOT implicit - just direct function call)
 - Explicit types: `(set x int 42)` (NOT inferred)
 
 **LLMs want EXPLICIT not FLEXIBLE**
@@ -142,7 +142,7 @@ Maximum explicitness = minimum ambiguity = LLM-friendly
 Issue:
 ```
 (set json string "{\"model\":\"codellama\"}")  ; json is TYPE keyword
-(call print json)                              ; Prints "0" not string!
+(print json_str)                              ; Would print garbage before fix
 ```
 
 Root cause:
@@ -165,8 +165,6 @@ Recommended variable names:
 - Use json_str, json_data, json_obj instead of json
 - Use arr, data_array instead of array
 - Use hashmap, value_map instead of map
-
-**STATUS**: ✅ FIXED - Parser rejects type keywords with helpful error message
 
 @(vm-crash-uninitialized-tls)
 
@@ -202,9 +200,9 @@ Location: `compiler/c/src/vm.c:655-671`
 
 Common LLM mistake:
 ```
-(call label my_label)   ; WRONG - parse error
-(call goto my_label)    ; WRONG - parse error
-(call ifnot flag skip)  ; WRONG - parse error
+(label my_label)        ; Core IR construct
+(goto my_label)         ; Core IR construct
+(ifnot flag skip)       ; Core IR construct
 ```
 
 Correct syntax:
@@ -217,7 +215,6 @@ Correct syntax:
 Explanation:
 - label/goto/ifnot are Core IR primitives, not functions
 - They have special parsing rules
-- They do NOT use (call ...) syntax
 - Parser recognizes them as statement types directly
 
 When to use:
@@ -280,9 +277,9 @@ Problem: Parser at compiler/c/src/parser.c lines 681-706 parses ALL remaining st
 Example of bug:
 ```aisl
 (if condition
-  (call print "then 1")
+  (print "then 1")
   (set x int 1)        ; ❌ Always executes regardless of condition!
-  (call print "else")) ; ❌ Always executes regardless of condition!
+  (print "else")) ; ❌ Always executes regardless of condition!
 ```
 
 What happens: The parser treats everything after the condition as a single sequence in the then-branch. There's no way to specify an else-branch.
@@ -290,19 +287,19 @@ What happens: The parser treats everything after the condition as a single seque
 **WORKAROUND - Result Variable Pattern**:
 ```aisl
 ; Store condition result in a variable
-(set success bool (call compile_test file))
+(set success bool (compile_test file))
 
 ; Then-branch: only executes if true
 (if success
-  (call print "✓ passed")
-  (set passed int (call add passed 1)))
+  (print "✓ passed")
+  (set passed int (add passed 1)))
 
 ; Else-branch: only executes if false
-(if (call not success)
-  (call print "✗ failed"))
+(if (not success)
+  (print "✗ failed"))
 ```
 
-Why this works: Each `if` is independent, and we control which one executes by using `(call not ...)`.
+Why this works: Each `if` is independent, and we control which one executes by using `(not ...)`.
 
 Alternative: Use result variable with multiple actions
 ```aisl
@@ -310,12 +307,12 @@ Alternative: Use result variable with multiple actions
 (set message string "failed")
 
 ; Override if condition is true
-(if (call gt x 5)
+(if (gt x 5)
   (set message string "success")
   (set x int 0))
 
 ; message is now either "failed" or "success"
-(call print message)
+(print message)
 ```
 
 **FOR LLMs**: ALWAYS use the result variable pattern for conditional logic with separate then/else branches.
@@ -347,7 +344,7 @@ Use descriptive names instead:
 Pattern that FAILS:
 ```aisl
 (fn test x int -> string
-  (set check bool (call lt x 0))
+  (set check bool (lt x 0))
   (if check
     (ret "negative"))
   (ret "positive"))
