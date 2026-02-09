@@ -445,3 +445,30 @@ Test coverage:
 - Decimal error messages: ✓ Working
 
 Status: ✅ FIXED - All 131 tests pass with correct error messages
+
+@(result-type-removed-2026-02-09)
+
+**REMOVED: Result type for LLM simplicity**
+
+Decision: Result type removed to minimize concepts for LLM code generation
+
+Rationale:
+- Result type only used in 5/131 tests (3.8%)
+- Added 84% token overhead for error handling
+- Created decision paralysis (when to use Result vs panic)
+- No type system enforcement - just map convention
+- Panics provide clear feedback for LLM regeneration
+
+Changes:
+- Removed stdlib/core/result.aisl (59 lines)
+- Removed OP_FILE_READ_RESULT, OP_FILE_WRITE_RESULT opcodes
+- Removed result opcode implementations from vm.c
+- Removed result type from .aisl.grammar
+- Removed 5 test files using Result
+
+Pattern:
+- Operations panic on error with clear message
+- LLM regenerates with appropriate checks
+- No imports needed for error handling
+
+Status: ✅ REMOVED - Simpler language, fewer concepts for LLMs

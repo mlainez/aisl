@@ -1,5 +1,5 @@
 @(grammar aisl-agent)
-@(stat tests:122 passing:122 examples:17 stdlib:11)
+@(stat tests:126 passing:126 examples:17 stdlib:10)
 @(syn
   (prog (module name imp* fn*))
   (imp (import name))
@@ -7,7 +7,7 @@
   (s (set v ty e) | (f a*) | (ret e) | (while e s*) | (loop s*) | (if e s*) | (break) | (cont))
   (e lit | var | (f a*))
   (lit int | float | str | true | false)
-  (ty int|float|decimal|bool|str|arr|map|json|result|regex|process|socket|file))
+  (ty int|float|decimal|bool|str|arr|map|json|regex|process|socket|file))
 @(op
   (arith add sub mul div mod neg abs min max pow sqrt)
   (cmp eq ne lt gt le ge)
@@ -36,7 +36,7 @@
     (ret s)))
 @(mod
   (stdlib-modules "11 modules in pure AISL")
-  (core "result string_utils conversion")
+  (core "string_utils conversion")
   (data "json base64")
   (net "http websocket")
   (pattern "regex")
@@ -44,7 +44,6 @@
   (sys "time process")
   (db "sqlite")
   (paths "stdlib/core/ stdlib/data/ stdlib/net/ stdlib/sys/ stdlib/crypto/ stdlib/pattern/ stdlib/db/")
-  (import-basic "(import result) - loads stdlib/core/result.aisl")
   (import-qualified "(import json from data) - NOT SUPPORTED - use (import json_utils)"))
 @(note
   (no-comments "AISL does not support comments")
@@ -66,7 +65,7 @@
   (test-framework "use test-spec, case, input, expect")
   (regex-builtin "regex type + compile/match/find/replace ops")
   (aisl-only-tooling "NEVER Python/Bash - ALWAYS AISL")
-  (reserved-types "NEVER use as var names: decimal json array map result option int float string bool process socket file")
+  (reserved-types "NEVER use as var names: decimal json array map int float string bool process socket file")
   (handle-types "process socket file are first-class types - use for DB handles, TCP sockets, files")
   (type-safety "use process for DB handles, socket for TCP, file for files - NO string")
   (sqlite-tcp-works "SQLite + TCP work with proper handle types")
@@ -77,7 +76,6 @@
   (modules-first "import statement BEFORE fn definitions")
   (module-closing-paren "modules MUST end with ) - missing causes 'Module not found'")
   (stdlib-imports "string ops need (import string_utils) - json needs (import json_utils)")
-  (stdlib-result "Result type needs (import result)")
   (string-slice-params "string_slice takes (str, start, LENGTH) NOT (str, start, end)")
   (reserved-test-keywords "input expect case CANNOT be variable names - reserved by test-spec parser")
   (decimal-type "decimal type for arbitrary precision arithmetic - stored as normalized strings")

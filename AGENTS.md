@@ -468,7 +468,7 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 
 ```lisp
 (module my_program
-  (import result)                   ; From stdlib/core/result.aisl
+  ; Result type removed - use panic-based error handling
   (import string_utils)             ; From stdlib/core/string_utils.aisl
   (import json_utils)               ; From stdlib/data/json_utils.aisl
   (import regex)                    ; From stdlib/pattern/regex.aisl
@@ -550,135 +550,6 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 - ✅ TCP/networking (tcp_listen, tcp_accept, tcp_connect, tcp_send, tcp_receive)
 
 ### Common Stdlib Patterns
-
-**Pattern 1: Error Handling with Result Type**
-
-```lisp
-(module safe_file_reader
-  (import result)
-  
-  (fn safe_read path string -> result
-    (set exists bool (call file_exists path))
-    (if (call not exists)
-      (ret (call err 1 "File not found")))
-    (set content string (call file_read path))
-    (ret (call ok content)))
-  
-  (fn main -> int
-    (set result result (call safe_read "data.txt"))
-    (if (call is_ok result)
-      (set content string (call unwrap result))
-      (call print content)
-      (ret 0))
-    ; Handle error
-    (set msg string (call error_message result))
-    (call print msg)
-    (ret 1)))
-```
-
-**Pattern 2: String Processing**
-
-```lisp
-(module text_processor
-  (import string_utils)
-  
-  (fn process_text text string -> string
-    (set trimmed string (call trim text))
-    (set upper string (call to_upper trimmed))
-    (set words array (call split upper " "))
-    (ret upper))
-  
-  (fn main -> int
-    (set result string (call process_text "  hello world  "))
-    (call print result)  ; Prints: HELLO WORLD
-    (ret 0)))
-```
-
-**Pattern 3: JSON API Response**
-
-```lisp
-(module api_client
-  (import json_utils)
-  (import http)
-  
-  (fn fetch_user id int -> json
-    (set url string "https://api.example.com/users/")
-    (set id_str string (call string_from_int id))
-    (set full_url string (call string_concat url id_str))
-    
-    (set response string (call get full_url))
-    (set json_obj json (call json_parse response))
-    (ret json_obj))
-  
-  (fn main -> int
-    (set user json (call fetch_user 123))
-    (set name string (call json_get user "name"))
-    (call print name)
-    (ret 0)))
-```
-
-**Pattern 4: Multiple Imports**
-
-```lisp
-(module complete_example
-  (import result)
-  (import string_utils)
-  (import json_utils)
-  (import hash)
-  
-  (fn main -> int
-    ; Use all imports together
-    (set text string "  Hello  ")
-    (set trimmed string (call trim text))
-    (set hash_val string (call crypto_sha256 trimmed))
-    
-    (set obj json (call json_new_object))
-    (call json_set obj "text" trimmed)
-    (call json_set obj "hash" hash_val)
-    
-    (set result result (call ok (call json_stringify obj)))
-    (if (call is_ok result)
-      (call print (call unwrap result)))
-    
-    (ret 0)))
-```
-
-**Pattern 5: Type Conversion and Formatting**
-
-```lisp
-(module format_example
-  (import conversion)
-  
-  (fn format_temperature celsius float -> string
-    (set fahrenheit float (call celsius_to_fahrenheit celsius))
-    (set c_str string (call string_from_float celsius))
-    (set f_str string (call string_from_float fahrenheit))
-    (set result string (call string_concat c_str "°C = "))
-    (set result string (call string_concat result f_str))
-    (set result string (call string_concat result "°F"))
-    (ret result))
-  
-  (fn build_http_response status int body string -> string
-    (set status_str string (call string_from_int status))
-    (set response string (call string_concat "HTTP/1.1 " status_str))
-    (set response string (call string_concat response " OK\r\n"))
-    (set content_len int (call string_length body))
-    (set len_str string (call string_from_int content_len))
-    (set response string (call string_concat response "Content-Length: "))
-    (set response string (call string_concat response len_str))
-    (set response string (call string_concat response "\r\n\r\n"))
-    (set response string (call string_concat response body))
-    (ret response))
-  
-  (fn main -> int
-    (set temp_str string (call format_temperature 25.0))
-    (call print temp_str)  ; Prints: 25.000°C = 77.000°F
-    
-    (set response string (call build_http_response 200 "Hello"))
-    (call print response)  ; Proper HTTP response with Content-Length
-    
-    (ret 0)))
-```
 
 ### Important Notes for LLMs
 
@@ -946,7 +817,7 @@ AISL has a built-in test framework. Add tests to verify behavior:
 - **Control flow**: See AISL-AGENT.md examples
 - **Built-in functions**: See LANGUAGE_SPEC.md section 5 (180+ functions)
 - **Type system**: See AISL-CORE.md section "Types"
-- **Error handling**: See result type patterns above and tests/test_result_*.aisl
+- **Error handling**: Operations panic on error. Use (file_exists) to check before operations.
 
 ---
 
@@ -1205,7 +1076,7 @@ Use a descriptive name instead (e.g., 'json_data', 'json_value')
   (ret 0))
 ```
 
-**Reserved type keywords:** `int`, `float`, `string`, `bool`, `json`, `array`, `map`, `result`, `option`, `channel`, `future`, `unit`
+**Reserved type keywords:** `int`, `float`, `string`, `bool`, `json`, `array`, `map`, `channel`, `future`, `unit`
 
 ### ❌ Don't: Name modules with type keywords
 
@@ -1337,21 +1208,9 @@ AISL is designed for predictable performance:
 
 ## Current Limitations
 
-### Not Yet Implemented
-
-1. **Struct/Record types**: Planned but not implemented
-   - Use multiple variables or arrays for now
-   - Maps can be used for key-value pairs
-
-2. **Option type**: For nullable values (Result type is complete)
-   - `some`, `none`, `is_some`, `is_none` are planned
-   - Use result type with special error codes as workaround
-
-3. **Generics**: Not planned - use type-directed dispatch instead
-
 ### Design Decisions
 
-- **No exceptions**: Use explicit error checking with result types
+- **No exceptions**: Operations panic on error
 - **No null**: Variables must be initialized
 - **No undefined behavior**: All operations have defined semantics
 - **No operator overloading**: One operation name = one meaning

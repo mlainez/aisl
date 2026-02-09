@@ -1620,34 +1620,6 @@ void compile_apply(Compiler* comp, Expr* expr) {
     // Note: 'ok' and 'err' are now regular functions, not reserved keywords
     
     
-    // File operations with result type
-    if (strcmp(name, "file_read_result") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "file_read_result expects 1 argument (path)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_FILE_READ_RESULT};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "file_write_result") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "file_write_result expects 2 arguments (path, content)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_FILE_WRITE_RESULT};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
-    if (strcmp(name, "file_append_result") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 2) {
-            fprintf(stderr, "file_append_result expects 2 arguments (path, content)\n");
-            exit(1);
-        }
-        Instruction inst = {.opcode = OP_FILE_APPEND_RESULT};
-        bytecode_emit(comp->program, inst);
-        return;
-    }
     if (strcmp(name, "file_size") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 1) {
             fprintf(stderr, "file_size expects 1 argument (path)\n");

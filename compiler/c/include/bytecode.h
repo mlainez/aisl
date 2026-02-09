@@ -139,12 +139,7 @@ typedef enum {
     OP_MAP_KEYS,      // Get array of keys: map -> array
 
     // JSON Operations - REMOVED: Now in stdlib/data/json.aisl (uses map primitives)
-    // Result Type Operations - REMOVED: Now in stdlib/core/result.aisl (uses map primitives)
-
-    // File System Operations (Result variants)
-    OP_FILE_READ_RESULT,  // Read file with error handling: path -> result
-    OP_FILE_WRITE_RESULT, // Write file with error handling: path content -> result
-    OP_FILE_APPEND_RESULT,// Append with error handling: path content -> result
+    // Result Type Operations - REMOVED: Result type removed for LLM simplicity
 
     // File System Operations
     OP_FILE_READ,         // Read file contents: path -> string
