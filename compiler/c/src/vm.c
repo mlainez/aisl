@@ -766,6 +766,18 @@ static char* tcp_receive(Socket* sock, int max_bytes) {
     char* buffer = malloc(max_bytes + 1);
     ssize_t n;
     
+    // Non-blocking: check if data available first
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(sock->sockfd, &read_fds);
+    struct timeval tv = {0, 0};
+    int ready = select(sock->sockfd + 1, &read_fds, NULL, NULL, &tv);
+    
+    if (ready <= 0) {
+        free(buffer);
+        return strdup("");  // No data available
+    }
+    
     if (sock->is_tls) {
         n = SSL_read(sock->ssl, buffer, max_bytes);
     } else {
@@ -790,6 +802,62 @@ static void tcp_close(Socket* sock) {
     }
     close(sock->sockfd);
     free(sock);
+}
+
+static Array* socket_select(Array* sockets) {
+    if (!sockets || sockets->count == 0) {
+        Array* empty = malloc(sizeof(Array));
+        empty->items = NULL;
+        empty->count = 0;
+        empty->capacity = 0;
+        return empty;
+    }
+    
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    int max_fd = 0;
+    
+    // Build fd_set from sockets
+    for (int i = 0; i < sockets->count; i++) {
+        Value* val = &sockets->items[i];
+        if (val->type == VAL_TCP_SOCKET || val->type == VAL_UDP_SOCKET) {
+            Socket* sock = (Socket*)val->data.ptr_val;
+            if (sock && sock->sockfd > max_fd) {
+                max_fd = sock->sockfd;
+            }
+            FD_SET(sock->sockfd, &read_fds);
+        }
+    }
+    
+    struct timeval tv = {0, 0};  // Non-blocking check
+    int ready = select(max_fd + 1, &read_fds, NULL, NULL, &tv);
+    
+    // Build result array of indices
+    Array* result = malloc(sizeof(Array));
+    result->capacity = 16;
+    result->count = 0;
+    result->items = malloc(sizeof(Value) * 16);
+    
+    if (ready > 0) {
+        for (int i = 0; i < sockets->count; i++) {
+            Value* val = &sockets->items[i];
+            if (val->type == VAL_TCP_SOCKET || val->type == VAL_UDP_SOCKET) {
+                Socket* sock = (Socket*)val->data.ptr_val;
+                if (sock && FD_ISSET(sock->sockfd, &read_fds)) {
+                    Value idx_val;
+                    idx_val.type = VAL_INT;
+                    idx_val.data.int_val = i;
+                    result->items[result->count++] = idx_val;
+                }
+            }
+        }
+    }
+    
+    return result;
+}
+
+static void thread_yield() {
+    sched_yield();
 }
 
 static Socket* udp_socket() {
@@ -3187,6 +3255,25 @@ int vm_run(VM* vm) {
                 }
                 
                 tcp_close(sock);
+                Value unit = {.type = VAL_UNIT};
+                push(vm, unit);
+                vm->ip++;
+                break;
+            }
+
+            case OP_SOCKET_SELECT: {
+                Value arr_val = pop(vm);
+                Array* sockets = (Array*)arr_val.data.ptr_val;
+                
+                Array* ready_indices = socket_select(sockets);
+                Value result = {.type = VAL_ARRAY, .data.ptr_val = ready_indices};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_THREAD_YIELD: {
+                thread_yield();
                 Value unit = {.type = VAL_UNIT};
                 push(vm, unit);
                 vm->ip++;

@@ -38,7 +38,7 @@ stdlib/ (pure AISL implementations):
 - net/: http, websocket
 - pattern/: regex
 - crypto/: hash
-- sys/: time, process
+- sys/: time, process, sleep
 - db/: sqlite
 
 modules/ (additional modules):

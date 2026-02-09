@@ -1929,6 +1929,24 @@ void compile_apply(Compiler* comp, Expr* expr) {
         bytecode_emit(comp->program, inst);
         return;
     }
+    if (strcmp(name, "socket_select") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "socket_select expects 1 argument (array of sockets)\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_SOCKET_SELECT};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "thread_yield") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 0) {
+            fprintf(stderr, "thread_yield expects 0 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_THREAD_YIELD};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
     if (strcmp(name, "udp_socket") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 0) {
             fprintf(stderr, "udp_socket expects 0 arguments\n");

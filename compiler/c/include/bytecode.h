@@ -191,8 +191,10 @@ typedef enum {
     OP_TCP_CONNECT,       // Connect to host:port: host port -> socket
     OP_TCP_TLS_CONNECT,   // Connect with TLS: host port -> socket
     OP_TCP_SEND,          // Send data: socket data -> int
-    OP_TCP_RECEIVE,       // Receive data: socket max_bytes -> string
+    OP_TCP_RECEIVE,       // Receive data (non-blocking): socket max_bytes -> string ("" if no data)
     OP_TCP_CLOSE,         // Close socket: socket -> unit
+    OP_SOCKET_SELECT,     // Select ready sockets: [sockets] -> [indices]
+    OP_THREAD_YIELD,      // Yield to scheduler: -> unit
     OP_UDP_SOCKET,        // Create UDP socket: -> socket
     OP_UDP_BIND,          // Bind UDP socket: socket port -> bool
     OP_UDP_SEND_TO,       // Send to address: socket data host port -> int
