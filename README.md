@@ -108,19 +108,19 @@ These design decisions were made during collaborative AI-human development to ma
 
 ### What AISL is FOR
 
-✅ **AI Code Generation** - Primary design goal  
-✅ **Web Services** - HTTP servers, REST APIs, WebSocket servers  
-✅ **CLI Tools** - System utilities, automation scripts  
-✅ **Network Services** - TCP servers, protocol implementations  
-✅ **Data Processing** - JSON/CSV parsing, transformations  
-✅ **System Integration** - Process spawning, IPC, database clients  
+✅ **AI Code Generation** - Primary design goal
+✅ **Web Services** - HTTP servers, REST APIs, WebSocket servers
+✅ **CLI Tools** - System utilities, automation scripts
+✅ **Network Services** - TCP servers, protocol implementations
+✅ **Data Processing** - JSON/CSV parsing, transformations
+✅ **System Integration** - Process spawning, IPC, database clients
 
 ### What AISL is NOT FOR
 
-❌ **Real-time Systems** - Bytecode interpreter overhead  
-❌ **Low-level System Programming** - No manual memory management, no pointers  
-❌ **GUI Applications** - No GUI framework (yet)  
-❌ **Performance-Critical Inner Loops** - Compile to C/Rust for hot paths  
+❌ **Real-time Systems** - Bytecode interpreter overhead
+❌ **Low-level System Programming** - No manual memory management, no pointers
+❌ **GUI Applications** - No GUI framework (yet)
+❌ **Performance-Critical Inner Loops** - Compile to C/Rust for hot paths
 
 ## Core Features
 
@@ -231,7 +231,7 @@ All stdlib modules are implemented **in pure AISL**, not C. This enforces our ph
     (set n_minus_1 int (call sub n 1))
     (set prev int (call factorial n_minus_1))
     (ret (call mul n prev)))
-  
+
   (fn main -> int
     (set result int (call factorial 5))
     (call print result)  ; Prints: 120
@@ -248,7 +248,7 @@ All stdlib modules are implemented **in pure AISL**, not C. This enforces our ph
     (call tcp_send client_sock response)
     (call tcp_close client_sock)
     (ret 0))
-  
+
   (fn main -> int
     (set server_sock string (call tcp_listen 8080))
     (call print "Server listening on port 8080")
@@ -268,7 +268,7 @@ AISL has **126 passing tests** covering all language features. All tests use the
 (module test_addition
   (fn add_numbers a int b int -> int
     (ret (call add a b)))
-  
+
   (test-spec add_numbers
     (case "adds positive numbers"
       (input 2 3)
@@ -276,7 +276,7 @@ AISL has **126 passing tests** covering all language features. All tests use the
     (case "handles negative numbers"
       (input -5 -3)
       (expect -8)))
-  
+
   (meta-note "Tests integer addition"))
 ```
 
@@ -360,7 +360,7 @@ aisl/
 
 **Decision:** AISL intentionally has no comment syntax (no `;`, `//`, `#`, `/* */`).
 
-**Rationale:** 
+**Rationale:**
 - Forces descriptive variable and function names
 - Prevents commented-out code cruft
 - Use `meta-note` in tests for documentation
@@ -474,22 +474,22 @@ AISL is currently in active development. All changes must:
 
 ## Strengths
 
-✅ **LLM-Optimized** - Designed for reliable AI code generation  
-✅ **Zero Ambiguity** - Every construct has exactly one meaning  
-✅ **Stable Target** - Core IR frozen forever  
-✅ **Batteries Included** - 180+ built-in functions, 14 stdlib modules  
-✅ **Fast Compilation** - Single-pass, <1ms per module  
-✅ **Easy to Parse** - S-expression syntax  
-✅ **Explicit Everything** - No surprises, no hidden behavior  
-✅ **Real-World Ready** - Production HTTP servers, database clients, JSON processing  
+✅ **LLM-Optimized** - Designed for reliable AI code generation
+✅ **Zero Ambiguity** - Every construct has exactly one meaning
+✅ **Stable Target** - Core IR frozen forever
+✅ **Batteries Included** - 180+ built-in functions, 14 stdlib modules
+✅ **Fast Compilation** - Single-pass, <1ms per module
+✅ **Easy to Parse** - S-expression syntax
+✅ **Explicit Everything** - No surprises, no hidden behavior
+✅ **Real-World Ready** - Production HTTP servers, database clients, JSON processing
 
 ## Weaknesses (Known Limitations)
 
-❌ **Interpreter Overhead** - Not as fast as compiled C/Rust (not the goal)  
-❌ **No SIMD** - Bytecode VM doesn't vectorize  
-❌ **No Parallel Execution** - Single-threaded for now (async planned)  
-❌ **Limited Ecosystem** - Young language, stdlib still growing  
-❌ **No IDE Support** - LSP server planned but not implemented  
+❌ **Interpreter Overhead** - Not as fast as compiled C/Rust (not the goal)
+❌ **No SIMD** - Bytecode VM doesn't vectorize
+❌ **No Parallel Execution** - Single-threaded for now (async planned)
+❌ **Limited Ecosystem** - Young language, stdlib still growing
+❌ **No IDE Support** - LSP server planned but not implemented
 
 ## Roadmap
 
@@ -504,10 +504,6 @@ AISL is currently in active development. All changes must:
 - [ ] WebAssembly target
 - [ ] Parallel execution model
 - [ ] Native compilation (AISL → C)
-
-## License
-
-[License information to be added]
 
 ---
 
