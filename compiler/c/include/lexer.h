@@ -82,11 +82,12 @@ typedef enum {
     TOK_TYPE_BOOL,
     TOK_TYPE_UNIT,
     
-    // Simple types (v6.0 - simplified to int/float only)
+    // Numeric types (v6.0 - simplified to int and float only)
     TOK_TYPE_INT,      // 64-bit integer (the only integer type)
     TOK_TYPE_FLOAT,    // 64-bit float (the only float type)
+    TOK_TYPE_DECIMAL,  // Arbitrary precision decimal
     
-    // Additional v4.0 types
+    // Container types
     TOK_TYPE_ARRAY,
     TOK_TYPE_MAP,
     

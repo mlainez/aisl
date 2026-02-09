@@ -2,6 +2,7 @@
 #define _XOPEN_SOURCE 700
 #define OPENSSL_API_COMPAT 0x10100000L
 #include "vm.h"
+#include "decimal.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -243,6 +244,11 @@ static Value value_clone(Value val) {
     if (val.type == VAL_STRING) {
         Value copy = val;
         copy.data.string_val = strdup(val.data.string_val);
+        return copy;
+    }
+    if (val.type == VAL_DECIMAL) {
+        Value copy = val;
+        copy.data.decimal_val = strdup(val.data.decimal_val);
         return copy;
     }
     return val;
@@ -1176,10 +1182,24 @@ int vm_run(VM* vm) {
                 break;
             }
 
+            case OP_PUSH_DECIMAL: {
+                uint32_t str_idx = inst.operand.uint_val;
+                Value val = {
+                    .type = VAL_DECIMAL,
+                    .data.decimal_val = strdup(vm->program->string_constants[str_idx])
+                };
+                push(vm, val);
+                vm->ip++;
+                break;
+            }
+
             case OP_POP: {
                 Value val = pop(vm);
                 if (val.type == VAL_STRING) {
                     free(val.data.string_val);
+                }
+                if (val.type == VAL_DECIMAL) {
+                    free(val.data.decimal_val);
                 }
                 vm->ip++;
                 break;
@@ -1208,6 +1228,9 @@ int vm_run(VM* vm) {
                 Value val = pop(vm);
                 if (vm->stack[fp + idx].type == VAL_STRING) {
                     free(vm->stack[fp + idx].data.string_val);
+                }
+                if (vm->stack[fp + idx].type == VAL_DECIMAL) {
+                    free(vm->stack[fp + idx].data.decimal_val);
                 }
                 vm->stack[fp + idx] = val;
                 vm->ip++;
@@ -1325,6 +1348,66 @@ int vm_run(VM* vm) {
                 break;
             }
 
+            // DECIMAL ARITHMETIC
+
+            case OP_ADD_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                char* result_str = decimal_add(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_DECIMAL, .data.decimal_val = result_str};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_SUB_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                char* result_str = decimal_sub(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_DECIMAL, .data.decimal_val = result_str};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_MUL_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                char* result_str = decimal_mul(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_DECIMAL, .data.decimal_val = result_str};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_DIV_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                char* result_str = decimal_div(a.data.decimal_val, b.data.decimal_val, 15);  // 15 digit precision
+                Value result = {.type = VAL_DECIMAL, .data.decimal_val = result_str};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_NEG_DECIMAL: {
+                Value a = pop(vm);
+                char* result_str = decimal_neg(a.data.decimal_val);
+                Value result = {.type = VAL_DECIMAL, .data.decimal_val = result_str};
+                free(a.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
             // INT (I64) COMPARISONS (v6.0 - removed i32)
 
             case OP_EQ_I64: {
@@ -1432,6 +1515,80 @@ int vm_run(VM* vm) {
                 Value b = pop(vm);
                 Value a = pop(vm);
                 Value result = {.type = VAL_BOOL, .data.bool_val = a.data.f64_val >= b.data.f64_val};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            // DECIMAL COMPARISONS
+
+            case OP_EQ_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                int cmp = decimal_cmp(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_BOOL, .data.bool_val = (cmp == 0)};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_NE_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                int cmp = decimal_cmp(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_BOOL, .data.bool_val = (cmp != 0)};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_LT_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                int cmp = decimal_cmp(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_BOOL, .data.bool_val = (cmp < 0)};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_GT_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                int cmp = decimal_cmp(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_BOOL, .data.bool_val = (cmp > 0)};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_LE_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                int cmp = decimal_cmp(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_BOOL, .data.bool_val = (cmp <= 0)};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_GE_DECIMAL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                int cmp = decimal_cmp(a.data.decimal_val, b.data.decimal_val);
+                Value result = {.type = VAL_BOOL, .data.bool_val = (cmp >= 0)};
+                free(a.data.decimal_val);
+                free(b.data.decimal_val);
                 push(vm, result);
                 vm->ip++;
                 break;
@@ -2338,6 +2495,21 @@ int vm_run(VM* vm) {
                 break;
             }
 
+            case OP_PRINT_DECIMAL: {
+                Value val = pop(vm);
+                if (val.type == VAL_DECIMAL) {
+                    printf("%s", val.data.decimal_val);
+                    free(val.data.decimal_val);
+                } else {
+                    printf("[non-decimal]");
+                }
+                fflush(stdout);
+                Value unit = {.type = VAL_UNIT};
+                push(vm, unit);
+                vm->ip++;
+                break;
+            }
+
             case OP_PRINT_ARRAY: {
                 Value val = pop(vm);
                 if (val.type == VAL_ARRAY) {
@@ -2353,6 +2525,7 @@ int vm_run(VM* vm) {
                             case VAL_F64: printf("%.15f", item.data.f64_val); break;
                             case VAL_BOOL: printf("%s", item.data.bool_val ? "true" : "false"); break;
                             case VAL_STRING: printf("\"%s\"", item.data.string_val); break;
+                            case VAL_DECIMAL: printf("%s", item.data.decimal_val); break;
                             default: printf("?"); break;
                         }
                     }
@@ -2416,6 +2589,56 @@ int vm_run(VM* vm) {
             case OP_CAST_F64_I64: {
                 Value val = pop(vm);
                 Value result = {.type = VAL_I64, .data.i64_val = (int64_t)val.data.f64_val};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            // DECIMAL CONVERSIONS
+
+            case OP_CAST_INT_DECIMAL: {
+                Value val = pop(vm);
+                char* decimal_str = decimal_from_int(val.data.i64_val);
+                Value result = {.type = VAL_DECIMAL, .data.decimal_val = decimal_str};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_CAST_DECIMAL_INT: {
+                Value val = pop(vm);
+                int64_t int_val = decimal_to_int(val.data.decimal_val);
+                Value result = {.type = VAL_I64, .data.i64_val = int_val};
+                free(val.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_CAST_FLOAT_DECIMAL: {
+                Value val = pop(vm);
+                char* decimal_str = decimal_from_float(val.data.f64_val);
+                Value result = {.type = VAL_DECIMAL, .data.decimal_val = decimal_str};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_CAST_DECIMAL_FLOAT: {
+                Value val = pop(vm);
+                double float_val = decimal_to_float(val.data.decimal_val);
+                Value result = {.type = VAL_F64, .data.f64_val = float_val};
+                free(val.data.decimal_val);
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_STR_FROM_DECIMAL: {
+                Value val = pop(vm);
+                char* str = strdup(val.data.decimal_val);
+                Value result = {.type = VAL_STRING, .data.string_val = str};
+                free(val.data.decimal_val);
                 push(vm, result);
                 vm->ip++;
                 break;

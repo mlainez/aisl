@@ -1,15 +1,15 @@
 (module test_flat_syntax
   (fn add_two a int b int -> int
-    (ret (call add a b)))
+    (ret (add a b)))
   
   (fn max a int b int -> int
-    (set greater bool (call gt a b))
+    (set greater bool (gt a b))
     (if greater
       (ret a))
     (ret b))
   
   (fn min a int b int -> int
-    (set less bool (call lt a b))
+    (set less bool (lt a b))
     (if less
       (ret a))
     (ret b))

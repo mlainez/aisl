@@ -1,68 +1,68 @@
 (module math_extended
   (fn clamp x int min_val int max_val int -> int
     (set result int x)
-    (set too_low bool (call lt x min_val))
+    (set too_low bool (lt x min_val))
     (if too_low
       (set result int min_val))
-    (set too_high bool (call gt x max_val))
+    (set too_high bool (gt x max_val))
     (if too_high
       (set result int max_val))
     (ret result))
   
   (fn clamp_float x float min_val float max_val float -> float
     (set result float x)
-    (set too_low bool (call lt x min_val))
+    (set too_low bool (lt x min_val))
     (if too_low
       (set result float min_val))
-    (set too_high bool (call gt x max_val))
+    (set too_high bool (gt x max_val))
     (if too_high
       (set result float max_val))
     (ret result))
   
   (fn sign x int -> int
     (set result int 0)
-    (set is_neg bool (call lt x 0))
+    (set is_neg bool (lt x 0))
     (if is_neg
       (set result int -1))
-    (set is_pos bool (call gt x 0))
+    (set is_pos bool (gt x 0))
     (if is_pos
       (set result int 1))
     (ret result))
   
   (fn sign_float x float -> int
     (set result int 0)
-    (set is_neg bool (call lt x 0.0))
+    (set is_neg bool (lt x 0.0))
     (if is_neg
       (set result int -1))
-    (set is_pos bool (call gt x 0.0))
+    (set is_pos bool (gt x 0.0))
     (if is_pos
       (set result int 1))
     (ret result))
   
   (fn lerp a float b float t float -> float
-    (set one_minus_t float (call sub 1.0 t))
-    (set term1 float (call mul a one_minus_t))
-    (set term2 float (call mul b t))
-    (ret (call add term1 term2)))
+    (set one_minus_t float (sub 1.0 t))
+    (set term1 float (mul a one_minus_t))
+    (set term2 float (mul b t))
+    (ret (add term1 term2)))
   
   (fn is_even x int -> bool
-    (set remainder int (call mod x 2))
-    (ret (call eq remainder 0)))
+    (set remainder int (mod x 2))
+    (ret (eq remainder 0)))
   
   (fn is_odd x int -> bool
-    (set remainder int (call mod x 2))
-    (ret (call ne remainder 0)))
+    (set remainder int (mod x 2))
+    (ret (ne remainder 0)))
   
   (fn square x int -> int
-    (ret (call mul x x)))
+    (ret (mul x x)))
   
   (fn square_float x float -> float
-    (ret (call mul x x)))
+    (ret (mul x x)))
   
   (fn cube x int -> int
-    (set x_squared int (call mul x x))
-    (ret (call mul x_squared x)))
+    (set x_squared int (mul x x))
+    (ret (mul x_squared x)))
   
   (fn cube_float x float -> float
-    (set x_squared float (call mul x x))
-    (ret (call mul x_squared x))))
+    (set x_squared float (mul x x))
+    (ret (mul x_squared x))))

@@ -1,10 +1,10 @@
 (module test_file_io
   (fn write_three_lines filepath string -> int
-    (set fd int (call io_file_open filepath 1))
-    (call io_file_write fd "Hello from AISL!\n")
-    (call io_file_write fd "This is line 2.\n")
-    (call io_file_write fd "And line 3.\n")
-    (call io_file_close fd)
+    (set fd int (io_file_open filepath 1))
+    (io_file_write fd "Hello from AISL!\n")
+    (io_file_write fd "This is line 2.\n")
+    (io_file_write fd "And line 3.\n")
+    (io_file_close fd)
     (ret 0))
   
   (test-spec write_three_lines
@@ -14,12 +14,12 @@
       (expect 0)))
   
   (fn read_after_write filepath string -> string
-    (set fd_write int (call io_file_open filepath 1))
-    (call io_file_write fd_write "Test content")
-    (call io_file_close fd_write)
-    (set fd_read int (call io_file_open filepath 0))
-    (set content string (call io_file_read fd_read))
-    (call io_file_close fd_read)
+    (set fd_write int (io_file_open filepath 1))
+    (io_file_write fd_write "Test content")
+    (io_file_close fd_write)
+    (set fd_read int (io_file_open filepath 0))
+    (set content string (io_file_read fd_read))
+    (io_file_close fd_read)
     (ret content))
   
   (test-spec read_after_write

@@ -1,9 +1,9 @@
 (module test_ok
   (import result)
   (fn create_ok_result value int -> int
-    (set val_str string (call string_from_i64 value))
-    (set result map (call ok val_str))
-    (set is_success bool (call is_ok result))
+    (set val_str string (string_from_i64 value))
+    (set result map (ok val_str))
+    (set is_success bool (is_ok result))
     (if is_success
       (ret 1))
     (ret 0))
@@ -14,9 +14,9 @@
       (expect 1)))
   
   (fn unwrap_ok_value value int -> string
-    (set val_str string (call string_from_i64 value))
-    (set result map (call ok val_str))
-    (set extracted string (call unwrap result))
+    (set val_str string (string_from_i64 value))
+    (set result map (ok val_str))
+    (set extracted string (unwrap result))
     (ret extracted))
   
   (test-spec unwrap_ok_value

@@ -1,6 +1,6 @@
 (module math
   (fn add a int b int -> int
-    (ret (call add a b)))
+    (ret (add a b)))
   
   (test-spec add
     (case "basic addition"

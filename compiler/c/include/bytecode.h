@@ -12,6 +12,7 @@ typedef enum {
     OP_PUSH_FLOAT,    // Push float constant (64-bit)
     OP_PUSH_STRING,   // Push string constant
     OP_PUSH_BOOL,     // Push boolean constant
+    OP_PUSH_DECIMAL,  // Push decimal constant (string representation)
     OP_PUSH_UNIT,     // Push unit value
     OP_POP,           // Pop top of stack
     OP_DUP,           // Duplicate top of stack
@@ -37,6 +38,13 @@ typedef enum {
     OP_DIV_FLOAT,
     OP_NEG_FLOAT,
 
+    // Arithmetic - decimal (arbitrary precision)
+    OP_ADD_DECIMAL,
+    OP_SUB_DECIMAL,
+    OP_MUL_DECIMAL,
+    OP_DIV_DECIMAL,
+    OP_NEG_DECIMAL,
+
     // Comparison - int (i64)
     OP_EQ_INT,
     OP_NE_INT,
@@ -53,6 +61,14 @@ typedef enum {
     OP_LE_FLOAT,
     OP_GE_FLOAT,
 
+    // Comparison - decimal
+    OP_EQ_DECIMAL,
+    OP_NE_DECIMAL,
+    OP_LT_DECIMAL,
+    OP_GT_DECIMAL,
+    OP_LE_DECIMAL,
+    OP_GE_DECIMAL,
+
     // Comparison - string
     OP_EQ_STR,
     OP_NE_STR,
@@ -63,8 +79,13 @@ typedef enum {
     OP_NOT_BOOL,
 
     // Type conversions (v6.0 - simplified to int/float only)
-    OP_CAST_INT_FLOAT,   // int -> float
-    OP_CAST_FLOAT_INT,   // float -> int
+    OP_CAST_INT_FLOAT,     // int -> float
+    OP_CAST_FLOAT_INT,     // float -> int
+    OP_CAST_INT_DECIMAL,   // int -> decimal
+    OP_CAST_DECIMAL_INT,   // decimal -> int
+    OP_CAST_FLOAT_DECIMAL, // float -> decimal
+    OP_CAST_DECIMAL_FLOAT, // decimal -> float
+    OP_STR_FROM_DECIMAL,   // decimal -> string
 
     // Math functions
     OP_MATH_SQRT_FLOAT,  // Square root (float only)
@@ -198,6 +219,7 @@ typedef enum {
     OP_PRINT_FLOAT,   // Print float
     OP_PRINT_STR,     // Print string
     OP_PRINT_BOOL,    // Print boolean
+    OP_PRINT_DECIMAL, // Print decimal
     OP_PRINT_ARRAY,   // Print array (for debugging)
     OP_PRINT_MAP,     // Print map (for debugging)
 

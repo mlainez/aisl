@@ -1,16 +1,16 @@
 (module test
-  (fn push_two_length size int val1 int val2 int -> int
-    (ret (call array_length (call array_push (call array_push (call array_new size) val1) val2))))
+  (fn push_two_length val1 int val2 int -> int
+    (ret (array_length (array_push (array_push (array_new) val1) val2))))
   
   (test-spec push_two_length
     (case "push two elements"
-      (input 10 42 100)
+      (input 42 100)
       (expect 2))
-    (case "push to empty array"
-      (input 0 1 2)
+    (case "push different values"
+      (input 1 2)
       (expect 2))
     (case "push same values"
-      (input 5 10 10)
+      (input 10 10)
       (expect 2)))
   
   (meta-note "Tests array_push adds elements and increases array_length"))

@@ -1,15 +1,15 @@
 (module test_result_file_io
   (import result)
   (fn safe_file_read path string -> int
-    (set result string (call file_read_result path))
-    (set success bool (call is_ok result))
+    (set result string (file_read_result path))
+    (set success bool (is_ok result))
     (if success
       (ret 1))
     (ret 0))
   
   (fn read_nonexistent_file -> int
-    (set result string (call file_read_result "/nonexistent/file/path.txt"))
-    (set is_error bool (call is_err result))
+    (set result string (file_read_result "/nonexistent/file/path.txt"))
+    (set is_error bool (is_err result))
     (if is_error
       (ret 1))
     (ret 0))
@@ -20,8 +20,8 @@
       (expect 1)))
   
   (fn safe_file_write path string content string -> int
-    (set result string (call file_write_result path content))
-    (set success bool (call is_ok result))
+    (set result string (file_write_result path content))
+    (set success bool (is_ok result))
     (if success
       (ret 1))
     (ret 0))

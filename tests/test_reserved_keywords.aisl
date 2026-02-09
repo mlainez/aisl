@@ -1,21 +1,21 @@
 (module test_reserved_keywords
   (fn test_json_keyword -> int
     (set json_str string "valid")
-    (call print json_str)
+    (print json_str)
     (ret 0))
   
   (fn test_array_keyword -> int
-    (set array_data array (call array_new 10))
-    (call array_push array_data 42)
-    (set val int (call array_get array_data 0))
-    (call print val)
+    (set array_data array (array_new))
+    (array_push array_data 42)
+    (set val int (array_get array_data 0))
+    (print val)
     (ret 0))
   
   (fn test_map_keyword -> int
-    (set map_data map (call map_new))
-    (call map_set map_data "key" "value")
-    (set has_key bool (call map_has map_data "key"))
-    (call print has_key)
+    (set map_data map (map_new))
+    (map_set map_data "key" "value")
+    (set has_key bool (map_has map_data "key"))
+    (print has_key)
     (ret 0))
   
   (test-spec test_json_keyword

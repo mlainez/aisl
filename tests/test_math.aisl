@@ -1,6 +1,6 @@
 (module test_math
   (fn sqrt_wrapper x float -> float
-    (ret (call math_sqrt x)))
+    (ret (math_sqrt x)))
   
   (test-spec sqrt_wrapper
     (case "perfect square"
@@ -14,7 +14,7 @@
       (expect 1.0)))
   
   (fn pow_wrapper base float exp float -> float
-    (ret (call math_pow base exp)))
+    (ret (math_pow base exp)))
   
   (test-spec pow_wrapper
     (case "power of 10"
@@ -28,7 +28,7 @@
       (expect 1.0)))
   
   (fn abs_i64 x int -> int
-    (ret (call math_abs_i64 x)))
+    (ret (math_abs_i64 x)))
   
   (test-spec abs_i64
     (case "absolute of negative"
@@ -42,7 +42,7 @@
       (expect 0)))
   
   (fn min_i64 a int b int -> int
-    (ret (call math_min_i64 a b)))
+    (ret (math_min_i64 a b)))
   
   (test-spec min_i64
     (case "first smaller"
@@ -56,7 +56,7 @@
       (expect 15)))
   
   (fn max_i64 a int b int -> int
-    (ret (call math_max_i64 a b)))
+    (ret (math_max_i64 a b)))
   
   (test-spec max_i64
     (case "first larger"

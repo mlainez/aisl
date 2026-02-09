@@ -1,10 +1,10 @@
 (module test_while
   (fn test_while -> int
     (set count int 0)
-    (while (call lt count 3)
-      (call print "In while loop")
-      (set count int (call add count 1)))
-    (call print "Done")
+    (while (lt count 3)
+      (print "In while loop")
+      (set count int (add count 1)))
+    (print "Done")
     (ret count))
 
   (test-spec test_while

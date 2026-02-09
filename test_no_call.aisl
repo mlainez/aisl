@@ -1,0 +1,11 @@
+(module test_no_call
+  (fn add a int b int -> int
+    (ret (add a b)))
+  
+  (fn main -> int
+    (print "Testing new syntax without call keyword")
+    (set x int 5)
+    (set y int 3)
+    (set result int (add x y))
+    (print result)
+    (ret 0)))

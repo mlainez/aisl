@@ -2,10 +2,10 @@
   (import math)
   
   (fn abs_negative -> int
-    (ret (call abs -5)))
+    (ret (abs -5)))
   
   (fn abs_positive -> int
-    (ret (call abs 10)))
+    (ret (abs 10)))
   
   (test-spec abs_negative
     (case "returns absolute value of negative number"

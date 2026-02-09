@@ -1,0 +1,28 @@
+(module test_decimal_manual
+  (fn main -> int
+    (set a decimal (cast_int_decimal 10))
+    (set b decimal (cast_int_decimal 5))
+    
+    (print "a = ")
+    (print a)
+    (print "\nb = ")
+    (print b)
+    
+    (set sum decimal (add a b))
+    (print "\na + b = ")
+    (print sum)
+    
+    (set diff decimal (sub a b))
+    (print "\na - b = ")
+    (print diff)
+    
+    (set prod decimal (mul a b))
+    (print "\na * b = ")
+    (print prod)
+    
+    (set quot decimal (div a b))
+    (print "\na / b = ")
+    (print quot)
+    
+    (print "\n")
+    (ret 0)))

@@ -1,6 +1,6 @@
 (module test_process
   (fn create_args_array size int -> array
-    (ret (call ArrayNew size)))
+    (ret (ArrayNew size)))
   
   (test-spec create_args_array
     (case "create array of size 1"
@@ -9,7 +9,7 @@
       (expect "array_1")))
   
   (fn set_array_element arr array idx int val string -> array
-    (call ArraySet arr idx val)
+    (ArraySet arr idx val)
     (ret arr))
   
   (test-spec set_array_element
@@ -19,7 +19,7 @@
       (expect "array_1")))
   
   (fn spawn_process cmd string args array -> string
-    (ret (call process_spawn cmd args)))
+    (ret (process_spawn cmd args)))
   
   (test-spec spawn_process
     (case "spawn sleep process"
@@ -32,7 +32,7 @@
       (expect "proc_2")))
   
   (fn wait_for_process proc string -> int
-    (ret (call process_wait proc)))
+    (ret (process_wait proc)))
   
   (test-spec wait_for_process
     (case "wait for sleep process exit code 0"
@@ -45,7 +45,7 @@
       (expect 0)))
   
   (fn read_process_output proc string -> string
-    (ret (call process_read proc)))
+    (ret (process_read proc)))
   
   (test-spec read_process_output
     (case "read echo output"

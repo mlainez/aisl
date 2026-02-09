@@ -1,18 +1,18 @@
 (module test_runner
   
   (fn main -> int
-    (call print "AISL Test Runner - Sample Tests")
+    (print "AISL Test Runner - Sample Tests")
     
     (set passed int 10)
     (set failed int 0)
     
-    (call print "Results:")
-    (call print passed)
-    (call print "sample tests passed")
-    (call print failed)
-    (call print "failed")
-    (call print "")
-    (call print "Note: Run manual compilation test with:")
-    (call print "  for f in tests/test_*.aisl; do ./compiler/c/bin/aislc $f /tmp/test.aislc && echo PASS || echo FAIL; done")
+    (print "Results:")
+    (print passed)
+    (print "sample tests passed")
+    (print failed)
+    (print "failed")
+    (print "")
+    (print "Note: Run manual compilation test with:")
+    (print "  for f in tests/test_*.aisl; do ./compiler/c/bin/aislc $f /tmp/test.aislc && echo PASS || echo FAIL; done")
     
     (ret 0)))

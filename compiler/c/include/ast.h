@@ -9,6 +9,7 @@
 typedef enum {
     TYPE_INT,           // Always i64 - only integer type in AISL
     TYPE_FLOAT,         // Always f64 - only float type in AISL
+    TYPE_DECIMAL,       // Arbitrary precision decimal
     TYPE_STRING,
     TYPE_BOOL,
     TYPE_UNIT,
@@ -389,6 +390,7 @@ Type* type_function(TypeList* params, Type* ret);
 Type* type_channel(Type* element);
 Type* type_future(Type* element);
 Type* type_float();
+Type* type_decimal();
 Type* type_array(Type* element);
 Type* type_map(Type* key, Type* value);
 Type* type_json();

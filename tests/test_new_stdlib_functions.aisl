@@ -5,7 +5,7 @@
   (import string_utils)
   
   (fn test_json_new_object -> int
-    (set obj map (call json_new_object))
+    (set obj map (json_new_object))
     (ret 1))
   
   (test-spec test_json_new_object
@@ -14,7 +14,7 @@
       (expect 1)))
   
   (fn test_json_new_array -> int
-    (set arr array (call json_new_array))
+    (set arr array (json_new_array))
     (ret 1))
   
   (test-spec test_json_new_array
@@ -23,10 +23,10 @@
       (expect 1)))
   
   (fn test_json_set_get name string -> int
-    (set obj map (call json_new_object))
-    (set obj map (call json_set obj "name" name))
-    (set result string (call json_get obj "name"))
-    (set matches bool (call string_equals result name))
+    (set obj map (json_new_object))
+    (set obj map (json_set obj "name" name))
+    (set result string (json_get obj "name"))
+    (set matches bool (string_equals result name))
     (if matches
       (ret 1))
     (ret 0))
@@ -37,9 +37,9 @@
       (expect 1)))
   
   (fn test_json_push_length val string -> int
-    (set arr array (call json_new_array))
-    (set arr array (call json_push arr val))
-    (ret (call json_length arr)))
+    (set arr array (json_new_array))
+    (set arr array (json_push arr val))
+    (ret (json_length arr)))
   
   (test-spec test_json_push_length
     (case "pushes value and gets length"
@@ -47,8 +47,8 @@
       (expect 1)))
   
   (fn test_error_code code int -> int
-    (set err_result map (call err code "Test error"))
-    (ret (call error_code err_result)))
+    (set err_result map (err code "Test error"))
+    (ret (error_code err_result)))
   
   (test-spec test_error_code
     (case "extracts error code 404"
@@ -59,7 +59,7 @@
       (expect 500)))
   
   (fn test_get_status_text code int -> string
-    (ret (call get_status_text code)))
+    (ret (get_status_text code)))
   
   (test-spec test_get_status_text
     (case "returns OK for 200"
@@ -70,7 +70,7 @@
       (expect "Not Found")))
   
   (fn test_string_reverse text string -> string
-    (ret (call string_reverse text)))
+    (ret (string_reverse text)))
   
   (test-spec test_string_reverse
     (case "reverses hello"

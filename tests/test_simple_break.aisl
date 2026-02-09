@@ -2,8 +2,8 @@
   (fn test_simple -> int
     (set i int 0)
     (loop
-      (set i int (call add i 1))
-      (if (call eq i 3)
+      (set i int (add i 1))
+      (if (eq i 3)
         (break)))
     (ret i))
 

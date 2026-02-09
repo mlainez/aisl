@@ -107,6 +107,8 @@ static bool values_equal(Value a, Value b) {
             return a.data.bool_val == b.data.bool_val;
         case VAL_STRING:
             return strcmp(a.data.string_val, b.data.string_val) == 0;
+        case VAL_DECIMAL:
+            return strcmp(a.data.decimal_val, b.data.decimal_val) == 0;
         case VAL_UNIT:
             return true;
         default:
@@ -132,6 +134,9 @@ static char* value_to_string(Value val) {
             break;
         case VAL_STRING:
             snprintf(str, 256, "\"%s\"", val.data.string_val);
+            break;
+        case VAL_DECIMAL:
+            snprintf(str, 256, "\"%s\"", val.data.decimal_val);
             break;
         case VAL_UNIT:
             snprintf(str, 256, "()");

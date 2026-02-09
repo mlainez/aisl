@@ -2,22 +2,22 @@
   (import sqlite)
   
   (fn test_open_memory -> bool
-    (set db string (call open ":memory:"))
-    (set is_valid bool (call gt (call string_length db) 0))
-    (call close db)
+    (set db string (open ":memory:"))
+    (set is_valid bool (gt (string_length db) 0))
+    (close db)
     (ret is_valid))
   
   (fn test_create_table -> bool
-    (set db string (call open ":memory:"))
-    (set result bool (call exec db "CREATE TABLE users(id INTEGER, name TEXT)"))
-    (call close db)
+    (set db string (open ":memory:"))
+    (set result bool (exec db "CREATE TABLE users(id INTEGER, name TEXT)"))
+    (close db)
     (ret result))
   
   (fn test_insert_data -> bool
-    (set db string (call open ":memory:"))
-    (call exec db "CREATE TABLE users(id INTEGER, name TEXT)")
-    (set result bool (call exec db "INSERT INTO users VALUES(1, 'Alice')"))
-    (call close db)
+    (set db string (open ":memory:"))
+    (exec db "CREATE TABLE users(id INTEGER, name TEXT)")
+    (set result bool (exec db "INSERT INTO users VALUES(1, 'Alice')"))
+    (close db)
     (ret result))
   
   (test-spec test_open_memory

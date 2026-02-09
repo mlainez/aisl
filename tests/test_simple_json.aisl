@@ -1,7 +1,7 @@
 (module test_simple
   (import json_utils)
   (fn create_object_with_name name string -> string
-    (ret (call json_stringify (call json_set (call json_new_object) "name" name))))
+    (ret (json_stringify (json_set (json_new_object) "name" name))))
   
   (test-spec create_object_with_name
     (case "set name Alice"
@@ -12,7 +12,7 @@
       (expect "{\"name\":\"Bob\"}")))
   
   (fn create_array_with_value val int -> string
-    (ret (call json_stringify (call json_push (call json_new_array) val))))
+    (ret (json_stringify (json_push (json_new_array) val))))
   
   (test-spec create_array_with_value
     (case "push 42"

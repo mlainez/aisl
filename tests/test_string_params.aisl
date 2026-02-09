@@ -3,12 +3,12 @@
     (ret text))
   
   (fn concat_twice a string b string -> string
-    (set result string (call string_concat a b))
+    (set result string (string_concat a b))
     (ret result))
   
   (fn chain text string -> string
-    (set temp string (call identity text))
-    (set result string (call identity temp))
+    (set temp string (identity text))
+    (set result string (identity temp))
     (ret result))
   
   (test-spec identity

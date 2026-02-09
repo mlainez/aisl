@@ -1,6 +1,6 @@
 (module test
   (fn add_two_numbers x int y int -> int
-    (ret (call add x y)))
+    (ret (add x y)))
   
   (test-spec add_two_numbers
     (case "add 42 and 100"

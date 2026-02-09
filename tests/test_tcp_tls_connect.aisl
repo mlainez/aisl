@@ -1,15 +1,15 @@
 (module test_tcp_tls_connect
   
   (fn test_tls_connect_google -> int
-    (set sock socket (call tcp_tls_connect "www.google.com" 443))
+    (set sock socket (tcp_tls_connect "www.google.com" 443))
     (set request string "GET / HTTP/1.1\r\nHost: www.google.com\r\nConnection: close\r\n\r\n")
-    (set sent int (call tcp_send sock request))
-    (if (call lt sent 0)
+    (set sent int (tcp_send sock request))
+    (if (lt sent 0)
       (ret 0))
-    (set response string (call tcp_receive sock 100))
-    (call tcp_close sock)
-    (set len int (call string_length response))
-    (if (call gt len 0)
+    (set response string (tcp_receive sock 100))
+    (tcp_close sock)
+    (set len int (string_length response))
+    (if (gt len 0)
       (ret 1))
     (ret 0))
   

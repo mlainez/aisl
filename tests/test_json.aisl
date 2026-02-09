@@ -1,7 +1,7 @@
 (module test_json
   (import json_utils)
   (fn parse_and_get_name json_str string -> string
-    (ret (call json_get (call json_parse json_str) "name")))
+    (ret (json_get (json_parse json_str) "name")))
   
   (test-spec parse_and_get_name
     (case "get Alice"
@@ -12,7 +12,7 @@
       (expect "Bob")))
   
   (fn parse_and_get_age json_str string -> int
-    (ret (call json_get (call json_parse json_str) "age")))
+    (ret (json_get (json_parse json_str) "age")))
   
   (test-spec parse_and_get_age
     (case "get age 30"
@@ -23,7 +23,7 @@
       (expect 25)))
   
   (fn parse_and_get_bool json_str string -> bool
-    (ret (call json_get (call json_parse json_str) "active")))
+    (ret (json_get (json_parse json_str) "active")))
   
   (test-spec parse_and_get_bool
     (case "get true"
@@ -34,7 +34,7 @@
       (expect 0)))
   
   (fn create_object_and_stringify key1 string val1 string key2 string val2 int -> string
-    (ret (call json_stringify (call json_set (call json_set (call json_new_object) key1 val1) key2 val2))))
+    (ret (json_stringify (json_set (json_set (json_new_object) key1 val1) key2 val2))))
   
   (test-spec create_object_and_stringify
     (case "create city object"
@@ -45,7 +45,7 @@
       (expect "{\"name\":\"Alice\",\"age\":30}")))
   
   (fn array_length v1 int v2 int v3 int -> int
-    (ret (call json_length (call json_push (call json_push (call json_push (call json_new_array) v1) v2) v3))))
+    (ret (json_length (json_push (json_push (json_push (json_new_array) v1) v2) v3))))
   
   (test-spec array_length
     (case "three elements"
@@ -56,7 +56,7 @@
       (expect 3)))
   
   (fn array_get_element v1 int v2 int v3 int idx int -> int
-    (ret (call json_get (call json_push (call json_push (call json_push (call json_new_array) v1) v2) v3) idx)))
+    (ret (json_get (json_push (json_push (json_push (json_new_array) v1) v2) v3) idx)))
   
   (test-spec array_get_element
     (case "get index 0"
@@ -70,7 +70,7 @@
       (expect 30)))
   
   (fn array_stringify v1 int v2 int v3 int -> string
-    (ret (call json_stringify (call json_push (call json_push (call json_push (call json_new_array) v1) v2) v3))))
+    (ret (json_stringify (json_push (json_push (json_push (json_new_array) v1) v2) v3))))
   
   (test-spec array_stringify
     (case "stringify array"
@@ -81,7 +81,7 @@
       (expect "[1,2,3]")))
   
   (fn get_object_type json_str string -> string
-    (ret (call json_type (call json_parse json_str))))
+    (ret (json_type (json_parse json_str))))
   
   (test-spec get_object_type
     (case "object type"

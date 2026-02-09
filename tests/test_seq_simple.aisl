@@ -11,7 +11,7 @@
       (expect 30)))
   
   (fn sum_three a int b int c int -> int
-    (ret (call add (call add a b) c)))
+    (ret (add (add a b) c)))
   
   (test-spec sum_three
     (case "sum 1 2 3"

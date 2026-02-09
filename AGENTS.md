@@ -291,8 +291,14 @@ Generate these - the compiler desugars them to Core:
 | `int` | 64-bit signed integer | `9223372036854775807` |
 | `float` | 32-bit float | `3.14` |
 | `float` | 64-bit float | `2.718281828` |
+| `decimal` | Arbitrary precision decimal | `19.99`, `0.1` |
 | `bool` | Boolean | `true`, `false` |
 | `string` | UTF-8 string | `"hello"` |
+
+**When to use decimal vs float:**
+- Use `decimal` for financial calculations where precision matters (money, percentages)
+- Use `float` for scientific calculations where performance matters
+- Example: `0.1 + 0.2` = `0.3` (decimal) vs `0.30000000000000004` (float)
 
 ### Type Annotations
 
@@ -300,7 +306,8 @@ Generate these - the compiler desugars them to Core:
 
 ```lisp
 (set count int 0)              ; Integer counter
-(set price float 19.99)          ; Float price
+(set price decimal 19.99)      ; Decimal price (financial precision)
+(set pi float 3.14159)         ; Float (scientific precision)
 (set name string "Alice")      ; String
 (set active bool true)         ; Boolean
 ```
@@ -327,7 +334,7 @@ Generate these - the compiler desugars them to Core:
 ### Arithmetic
 
 ```lisp
-(call add x y)     ; Becomes add, add, add, or add
+(call add x y)     ; Becomes add, add, add, add, or add
 (call sub x y)     ; Subtraction
 (call mul x y)     ; Multiplication
 (call div x y)     ; Division
@@ -335,7 +342,7 @@ Generate these - the compiler desugars them to Core:
 (call neg x)       ; Negation
 ```
 
-**You don't need to remember:** `add`, `add`, `add`, `add`  
+**You don't need to remember:** `add`, `add`, `add`, `add`, `add`  
 **Just write:** `(call add x y)` and the compiler figures it out from `x`'s type.
 
 ### Comparisons
@@ -534,7 +541,7 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 - ✅ Arithmetic (add, sub, mul, div, mod)
 - ✅ Comparisons (eq, ne, lt, gt, le, ge)
 - ✅ Basic math (abs, min, max, sqrt, pow)
-- ✅ Type conversions (cast_int_float, string_from_int, etc.)
+- ✅ Type conversions (cast_int_float, cast_int_decimal, cast_decimal_int, cast_float_decimal, cast_decimal_float, string_from_int, etc.)
 - ✅ Basic string ops (string_length, string_concat, string_slice)
 - ✅ I/O (print, print_ln, read_line)
 - ✅ File operations (file_read, file_write, file_exists)
@@ -807,6 +814,41 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
     (set i int (call add i 1)))
   (ret result))
 ```
+
+### Financial Calculation Pattern (Decimal Type)
+
+```lisp
+(fn calculate_total prices string tax_rate decimal -> decimal
+  (set total decimal (call cast_int_decimal 0))
+  (set i int 0)
+  (set len int (call array_length prices))
+  (while (call lt i len)
+    (set price decimal (call array_get prices i))
+    (set total decimal (call add total price))
+    (set i int (call add i 1)))
+  
+  ; Apply tax
+  (set tax decimal (call mul total tax_rate))
+  (set total_with_tax decimal (call add total tax))
+  (ret total_with_tax))
+
+(fn main -> int
+  (set prices string (call array_new))
+  (call array_push prices (call cast_float_decimal 19.99))
+  (call array_push prices (call cast_float_decimal 29.99))
+  
+  (set tax_rate decimal (call cast_float_decimal 0.08))  ; 8% tax
+  (set total decimal (call calculate_total prices tax_rate))
+  
+  (call print "Total with tax: ")
+  (call print total)  ; Precise decimal calculation
+  (ret 0))
+```
+
+**Why use decimal for financial calculations:**
+- Float: `0.1 + 0.2` = `0.30000000000000004` (wrong!)
+- Decimal: `0.1 + 0.2` = `0.3` (correct!)
+- Always use `decimal` for money, percentages, and accounting
 
 ### Error Handling Pattern (Result Type)
 

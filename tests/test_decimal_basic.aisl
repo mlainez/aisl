@@ -1,0 +1,13 @@
+(module test_decimal_basic
+  (fn decimal_add a int b int -> decimal
+    (set da decimal (cast_int_decimal a))
+    (set db decimal (cast_int_decimal b))
+    (set result decimal (add da db))
+    (ret result))
+  
+  (test-spec decimal_add
+    (case "adds two positive decimals"
+      (input 10 5)
+      (expect "15")))
+  
+  (meta-note "Tests basic decimal addition"))

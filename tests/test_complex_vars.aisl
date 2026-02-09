@@ -1,6 +1,6 @@
 (module test
   (fn mul_then_add x int y int z int -> int
-    (ret (call add (call mul x y) z)))
+    (ret (add (mul x y) z)))
   
   (test-spec mul_then_add
     (case "10 * 20 + 30"
@@ -14,7 +14,7 @@
       (expect 5)))
   
   (fn mul_f32 a float b float -> float
-    (ret (call mul a b)))
+    (ret (mul a b)))
   
   (test-spec mul_f32
     (case "pi * 2"

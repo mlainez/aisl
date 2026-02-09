@@ -1,27 +1,27 @@
 (module test_polymorphic_ops
   (fn test_print x int y int z string b bool -> int
-    (call print x)
-    (call print y)
-    (call print z)
-    (call print b)
+    (print x)
+    (print y)
+    (print z)
+    (print b)
     (ret 0))
 
   (fn test_array arr string -> int
-    (call array_push arr 42)
-    (call array_push arr 99)
-    (set size int (call array_length arr))
-    (call print size)
-    (set val int (call array_get arr 0))
+    (array_push arr 42)
+    (array_push arr 99)
+    (set size int (array_length arr))
+    (print size)
+    (set val int (array_get arr 0))
     (ret val))
 
   (fn test_string s string -> int
-    (set length int (call string_length s))
-    (call print length)
+    (set length int (string_length s))
+    (print length)
     (ret length))
 
   (fn test_math x int -> int
-    (set result int (call add x 10))
-    (call print result)
+    (set result int (add x 10))
+    (print result)
     (ret result))
 
   (test-spec test_print
@@ -31,7 +31,7 @@
 
   (test-spec test_array
     (case "array operations"
-      (input (call array_new))
+      (input (array_new))
       (expect 42)))
 
   (test-spec test_string

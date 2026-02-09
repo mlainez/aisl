@@ -1,6 +1,6 @@
 (module test_inline_validation
   (fn is_positive x int -> bool
-    (ret (call gt x 0)))
+    (ret (gt x 0)))
   
   (test-spec is_positive
     (case "returns true for positive numbers"

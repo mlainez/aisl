@@ -1,6 +1,6 @@
 (module test
   (fn print_string msg string -> int
-    (call print msg)
+    (print msg)
     (ret 0))
   
   (test-spec print_string
@@ -18,7 +18,7 @@
       (expect 0)))
   
   (fn print_integer num int -> int
-    (call print num)
+    (print num)
     (ret 0))
   
   (test-spec print_integer

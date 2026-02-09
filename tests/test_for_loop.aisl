@@ -1,10 +1,10 @@
 (module test_for_loop
   (fn sum_recursive start int end int -> int
-    (if (call ge start end)
+    (if (ge start end)
       (ret 0))
-    (set next int (call add start 1))
-    (set rest int (call sum_recursive next end))
-    (ret (call add start rest)))
+    (set next int (add start 1))
+    (set rest int (sum_recursive next end))
+    (ret (add start rest)))
   
   (test-spec sum_recursive
     (case "sum 0 to 10"

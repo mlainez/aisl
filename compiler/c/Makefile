@@ -15,7 +15,7 @@ COMPILER_OBJS = $(addprefix $(BUILD_DIR)/, $(COMPILER_SRCS:.c=.o))
 COMPILER = $(BIN_DIR)/aislc
 
 # Runner executable
-RUNNER_SRCS = runner.c bytecode.c vm.c runtime.c test_runner.c test_framework.c ast.c
+RUNNER_SRCS = runner.c bytecode.c vm.c runtime.c test_runner.c test_framework.c ast.c decimal.c
 RUNNER_OBJS = $(addprefix $(BUILD_DIR)/, $(RUNNER_SRCS:.c=.o))
 RUNNER = $(BIN_DIR)/aisl-run
 

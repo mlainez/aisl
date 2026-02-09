@@ -2,7 +2,7 @@
   (import math)
   
   (fn test_abs_positive x int -> int
-    (ret (call abs x)))
+    (ret (abs x)))
   
   (test-spec test_abs_positive
     (case "abs of positive number"
@@ -13,7 +13,7 @@
       (expect 42)))
   
   (fn test_min_ints a int b int -> int
-    (ret (call min a b)))
+    (ret (min a b)))
   
   (test-spec test_min_ints
     (case "min of 5 and 10"

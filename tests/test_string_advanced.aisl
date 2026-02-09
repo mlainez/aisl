@@ -1,7 +1,7 @@
 (module test_string_advanced
   (import string_utils)
   (fn split_csv text string delim string -> array
-    (ret (call string_split text delim)))
+    (ret (string_split text delim)))
   
   (test-spec split_csv
     (case "split CSV with spaces"
@@ -14,7 +14,7 @@
       (expect "simple_csv")))
   
   (fn trim_string text string -> string
-    (ret (call string_trim text)))
+    (ret (string_trim text)))
   
   (test-spec trim_string
     (case "trim padded text"
@@ -27,7 +27,7 @@
       (expect "Hello   World!")))
   
   (fn replace_text text string old string new string -> string
-    (ret (call string_replace text old new)))
+    (ret (string_replace text old new)))
   
   (test-spec replace_text
     (case "replace fox with dog"
@@ -44,7 +44,7 @@
       (expect "Hello Alice, welcome!")))
   
   (fn check_contains text string search string -> bool
-    (ret (call string_contains text search)))
+    (ret (string_contains text search)))
   
   (test-spec check_contains
     (case "contains dog"
@@ -57,7 +57,7 @@
       (expect false)))
   
   (fn concat_strings str1 string str2 string -> string
-    (ret (call concat str1 str2)))
+    (ret (concat str1 str2)))
   
   (test-spec concat_strings
     (case "concat with Name label"

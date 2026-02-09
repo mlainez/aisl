@@ -1,8 +1,8 @@
 (module test_file_io
   (fn write_file filepath string mode int content string -> int
-    (set fd int (call io_file_open filepath mode))
-    (call io_file_write fd content)
-    (call io_file_close fd)
+    (set fd int (io_file_open filepath mode))
+    (io_file_write fd content)
+    (io_file_close fd)
     (ret 0))
   
   (test-spec write_file

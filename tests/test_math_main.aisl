@@ -2,13 +2,13 @@
   (import math)
   
   (fn test_abs -> int
-    (ret (call abs -42)))
+    (ret (abs -42)))
   
   (fn test_min -> int
-    (ret (call min 10 5)))
+    (ret (min 10 5)))
   
   (fn test_max -> int
-    (ret (call max 10 5)))
+    (ret (max 10 5)))
   
   (test-spec test_abs
     (case "absolute value of -42"

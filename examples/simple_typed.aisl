@@ -1,5 +1,5 @@
 (module hello
   (fn main -> int
-    (call print 42)
+    (print 42)
     (ret 0)))
 

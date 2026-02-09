@@ -1,6 +1,6 @@
 (module test
   (fn multiply a int b int -> int
-    (ret (call mul a b)))
+    (ret (mul a b)))
   
   (test-spec multiply
     (case "multiply positive numbers"
@@ -17,11 +17,11 @@
       (expect -12)))
   
   (fn factorial n int -> int
-    (if (call le n 1)
+    (if (le n 1)
       (ret 1))
-    (set n_minus_1 int (call sub n 1))
-    (set fact_rest int (call factorial n_minus_1))
-    (ret (call mul n fact_rest)))
+    (set n_minus_1 int (sub n 1))
+    (set fact_rest int (factorial n_minus_1))
+    (ret (mul n fact_rest)))
   
   (test-spec factorial
     (case "factorial of 5"

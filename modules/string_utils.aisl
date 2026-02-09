@@ -1,71 +1,71 @@
 (module string_utils
   (fn string_is_empty s string -> bool
-    (set len int (call string_length s))
-    (ret (call eq len 0)))
+    (set len int (string_length s))
+    (ret (eq len 0)))
   
   (fn string_first_char s string -> string
-    (ret (call string_slice s 0 1)))
+    (ret (string_slice s 0 1)))
   
   (fn string_last_char s string -> string
-    (set len int (call string_length s))
-    (set last_idx int (call sub len 1))
-    (ret (call string_slice s last_idx len)))
+    (set len int (string_length s))
+    (set last_idx int (sub len 1))
+    (ret (string_slice s last_idx len)))
   
   (fn string_starts_with_char s string prefix string -> bool
-    (set first string (call string_first_char s))
-    (ret (call string_equals first prefix)))
+    (set first string (string_first_char s))
+    (ret (string_equals first prefix)))
   
   (fn string_ends_with_char s string suffix string -> bool
-    (set last string (call string_last_char s))
-    (ret (call string_equals last suffix)))
+    (set last string (string_last_char s))
+    (ret (string_equals last suffix)))
   
   (fn string_reverse s string -> string
-    (set len int (call string_length s))
+    (set len int (string_length s))
     (set result string "")
-    (set i int (call sub len 1))
-    (while (call ge i 0)
-      (set char string (call string_slice s i (call add i 1)))
-      (set result string (call string_concat result char))
-      (set i int (call sub i 1)))
+    (set i int (sub len 1))
+    (while (ge i 0)
+      (set char string (string_slice s i (add i 1)))
+      (set result string (string_concat result char))
+      (set i int (sub i 1)))
     (ret result))
   
   (fn string_repeat s string count int -> string
     (set result string "")
     (set i int 0)
-    (while (call lt i count)
-      (set result string (call string_concat result s))
-      (set i int (call add i 1)))
+    (while (lt i count)
+      (set result string (string_concat result s))
+      (set i int (add i 1)))
     (ret result))
   
   (fn string_count_char s string target string -> int
-    (set len int (call string_length s))
+    (set len int (string_length s))
     (set count int 0)
     (set i int 0)
-    (while (call lt i len)
-      (set char string (call string_slice s i (call add i 1)))
-      (set matches bool (call string_equals char target))
+    (while (lt i len)
+      (set char string (string_slice s i (add i 1)))
+      (set matches bool (string_equals char target))
       (if matches
-        (set count int (call add count 1)))
-      (set i int (call add i 1)))
+        (set count int (add count 1)))
+      (set i int (add i 1)))
     (ret count))
   
   (fn string_is_numeric s string -> bool
-    (set len int (call string_length s))
-    (set is_empty bool (call eq len 0))
+    (set len int (string_length s))
+    (set is_empty bool (eq len 0))
     (if is_empty
       (ret false))
     (set i int 0)
-    (while (call lt i len)
-      (set char string (call string_slice s i (call add i 1)))
-      (set is_digit bool (call string_contains "0123456789" char))
+    (while (lt i len)
+      (set char string (string_slice s i (add i 1)))
+      (set is_digit bool (string_contains "0123456789" char))
       (if is_digit
-        (set i int (call add i 1))
+        (set i int (add i 1))
         (continue))
-      (set is_minus bool (call string_equals char "-"))
-      (set is_first bool (call eq i 0))
+      (set is_minus bool (string_equals char "-"))
+      (set is_first bool (eq i 0))
       (if is_minus
         (if is_first
-          (set i int (call add i 1))
+          (set i int (add i 1))
           (continue)))
       (ret false))
     (ret true)))

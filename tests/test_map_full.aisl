@@ -1,6 +1,6 @@
 (module test
   (fn map_ops_length -> int
-    (ret (call map_length (call map_set (call map_set (call map_set (call map_new) "a" 100) "b" 200) "c" 300))))
+    (ret (map_length (map_set (map_set (map_set (map_new) "a" 100) "b" 200) "c" 300))))
   
   (test-spec map_ops_length
     (case "three entries"
@@ -8,7 +8,7 @@
       (expect 3)))
   
   (fn map_has_key key string -> bool
-    (ret (call map_has (call map_set (call map_set (call map_new) "a" 100) "b" 200) key)))
+    (ret (map_has (map_set (map_set (map_new) "a" 100) "b" 200) key)))
   
   (test-spec map_has_key
     (case "has key a"
@@ -22,7 +22,7 @@
       (expect 0)))
   
   (fn map_delete_then_length -> int
-    (ret (call map_length (call map_delete (call map_set (call map_set (call map_set (call map_new) "a" 100) "b" 200) "c" 300) "b"))))
+    (ret (map_length (map_delete (map_set (map_set (map_set (map_new) "a" 100) "b" 200) "c" 300) "b"))))
   
   (test-spec map_delete_then_length
     (case "delete one entry"
@@ -30,7 +30,7 @@
       (expect 2)))
   
   (fn map_delete_then_has key string -> bool
-    (ret (call map_has (call map_delete (call map_set (call map_new) "b" 200) "b") key)))
+    (ret (map_has (map_delete (map_set (map_new) "b" 200) "b") key)))
   
   (test-spec map_delete_then_has
     (case "deleted key b not present"

@@ -1,5 +1,5 @@
 (module hello
   (fn main -> int
-    (call print "Hello from AISL bytecode!\n")
+    (print "Hello from AISL bytecode!\n")
     (ret 0)))
 

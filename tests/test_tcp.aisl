@@ -1,6 +1,6 @@
 (module test_tcp
   (fn connect_tcp host string port int -> string
-    (ret (call tcp_connect host port)))
+    (ret (tcp_connect host port)))
   
   (test-spec connect_tcp
     (case "connect to example.com port 80"
@@ -9,7 +9,7 @@
       (expect "socket_1")))
   
   (fn send_tcp_data sock string data string -> int
-    (call tcp_send sock data)
+    (tcp_send sock data)
     (ret 0))
   
   (test-spec send_tcp_data
@@ -19,7 +19,7 @@
       (expect 0)))
   
   (fn receive_tcp_data sock string max_bytes int -> string
-    (ret (call tcp_receive sock max_bytes)))
+    (ret (tcp_receive sock max_bytes)))
   
   (test-spec receive_tcp_data
     (case "receive HTTP response"
@@ -28,7 +28,7 @@
       (expect "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n<html>...</html>")))
   
   (fn close_tcp sock string -> int
-    (call tcp_close sock)
+    (tcp_close sock)
     (ret 0))
   
   (test-spec close_tcp

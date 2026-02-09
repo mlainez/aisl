@@ -5,13 +5,13 @@
     (ret result))
   
   (fn test_multiple_accepts -> int
-    (set server socket (call tcp_listen 19999))
+    (set server socket (tcp_listen 19999))
     (set count int 0)
     (ret count))
   
   (test-spec test_socket_fields
     (case "verifies socket fields exist"
-      (input (call tcp_listen 19998))
+      (input (tcp_listen 19998))
       (expect 1)))
   
   (test-spec test_multiple_accepts

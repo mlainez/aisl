@@ -1,6 +1,6 @@
 (module test
   (fn eq_i64 a int b int -> bool
-    (ret (call eq a b)))
+    (ret (eq a b)))
   
   (test-spec eq_i64
     (case "equal large numbers"
@@ -11,7 +11,7 @@
       (expect 0)))
   
   (fn lt_i64 a int b int -> bool
-    (ret (call lt a b)))
+    (ret (lt a b)))
   
   (test-spec lt_i64
     (case "less than"
@@ -22,7 +22,7 @@
       (expect 0)))
   
   (fn gt_i64 a int b int -> bool
-    (ret (call gt a b)))
+    (ret (gt a b)))
   
   (test-spec gt_i64
     (case "greater than"

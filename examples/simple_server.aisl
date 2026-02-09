@@ -1,19 +1,19 @@
 (module simple_server
   (fn handle_connection client_sock string -> int
     (set response string "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK")
-    (set sent int (call tcp_send client_sock response))
-    (call tcp_close client_sock)
+    (set sent int (tcp_send client_sock response))
+    (tcp_close client_sock)
     (ret 0))
 
   (fn start_server port int -> int
-    (call print "Starting simple server...")
-    (set server_sock string (call tcp_listen port))
-    (call print "Listening on port 8080")
+    (print "Starting simple server...")
+    (set server_sock string (tcp_listen port))
+    (print "Listening on port 8080")
     (loop
-      (set client_sock string (call tcp_accept server_sock))
-      (call handle_connection client_sock))
+      (set client_sock string (tcp_accept server_sock))
+      (handle_connection client_sock))
     (ret 0))
 
   (fn main -> int
-    (call start_server 8080)
+    (start_server 8080)
     (ret 0)))

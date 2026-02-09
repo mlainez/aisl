@@ -158,6 +158,7 @@ static const char* get_typed_operation(const char* short_name, TypeKind type) {
             case TYPE_STRING: return "io_print_str";
             case TYPE_ARRAY: return "io_print_array";
             case TYPE_MAP: return "io_print_map";
+            case TYPE_DECIMAL: return "io_print_decimal";
             default: return "io_print_i64";
         }
     }
@@ -178,6 +179,7 @@ static const char* get_typed_operation(const char* short_name, TypeKind type) {
     switch (type) {
         case TYPE_INT: type_suffix = "_i64"; break;    // int is always i64
         case TYPE_FLOAT: type_suffix = "_f64"; break;  // float is always f64
+        case TYPE_DECIMAL: type_suffix = "_decimal"; break;
         default:
             // Not a numeric type, return original name
             return short_name;
@@ -782,6 +784,17 @@ void compile_apply(Compiler* comp, Expr* expr) {
         return;
     }
 
+    if (strcmp(name, "io_print_decimal") == 0) {
+        if (expr->data.apply.args == NULL || expr->data.apply.args->next != NULL) {
+            fprintf(stderr, "io_print_decimal expects exactly 1 argument\n");
+            exit(1);
+        }
+        compile_expr(comp, expr->data.apply.args->expr);
+        Instruction inst = {.opcode = OP_PRINT_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+
     // V4.0 File I/O operations
     if (strcmp(name, "io_file_open") == 0) {
         // io_file_open(path: string, mode: i32) -> i32 (file descriptor)
@@ -933,6 +946,53 @@ void compile_apply(Compiler* comp, Expr* expr) {
         return;
     }
 
+    // Decimal arithmetic operations
+    if (strcmp(name, "op_add_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_add_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_ADD_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_sub_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_sub_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_SUB_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_mul_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_mul_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_MUL_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_div_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_div_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_DIV_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_neg_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "op_neg_decimal expects 1 argument\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_NEG_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+
     // V4.0 Typed comparison operations - i64 (int is always i64 in AISL)
     if (strcmp(name, "op_eq_i64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 2) {
@@ -1045,6 +1105,62 @@ void compile_apply(Compiler* comp, Expr* expr) {
         return;
     }
 
+    // Decimal comparison operations
+    if (strcmp(name, "op_eq_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_eq_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_EQ_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_ne_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_ne_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_NE_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_lt_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_lt_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_LT_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_gt_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_gt_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_GT_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_le_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_le_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_LE_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "op_ge_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 2) {
+            fprintf(stderr, "op_ge_decimal expects 2 arguments\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_GE_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+
     // V4.0 Type conversion operations (only i64/f64, no i32/f32)
     if (strcmp(name, "cast_i64_f64") == 0) {
         if (compile_args(comp, expr->data.apply.args) != 1) {
@@ -1061,6 +1177,53 @@ void compile_apply(Compiler* comp, Expr* expr) {
             exit(1);
         }
         Instruction inst = {.opcode = OP_CAST_F64_I64};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    
+    // Decimal conversions
+    if (strcmp(name, "cast_int_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "cast_int_decimal expects 1 argument\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_CAST_INT_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "cast_decimal_int") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "cast_decimal_int expects 1 argument\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_CAST_DECIMAL_INT};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "cast_float_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "cast_float_decimal expects 1 argument\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_CAST_FLOAT_DECIMAL};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "cast_decimal_float") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "cast_decimal_float expects 1 argument\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_CAST_DECIMAL_FLOAT};
+        bytecode_emit(comp->program, inst);
+        return;
+    }
+    if (strcmp(name, "string_from_decimal") == 0) {
+        if (compile_args(comp, expr->data.apply.args) != 1) {
+            fprintf(stderr, "string_from_decimal expects 1 argument\n");
+            exit(1);
+        }
+        Instruction inst = {.opcode = OP_STR_FROM_DECIMAL};
         bytecode_emit(comp->program, inst);
         return;
     }
@@ -1230,10 +1393,17 @@ void compile_apply(Compiler* comp, Expr* expr) {
 
     
     if (strcmp(name, "array_new") == 0) {
-        if (compile_args(comp, expr->data.apply.args) != 1) {
-            fprintf(stderr, "array_new expects 1 argument (capacity)\n");
+        int arg_count = compile_args(comp, expr->data.apply.args);
+        if (arg_count != 0) {
+            fprintf(stderr, "array_new expects 0 arguments - arrays are always dynamic\n");
             exit(1);
         }
+        // Push default capacity of 16
+        Instruction push_cap = {
+            .opcode = OP_PUSH_INT,
+            .operand.int_val = 16
+        };
+        bytecode_emit(comp->program, push_cap);
         Instruction inst = {.opcode = OP_ARRAY_NEW};
         bytecode_emit(comp->program, inst);
         return;

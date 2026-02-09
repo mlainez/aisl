@@ -1,16 +1,10 @@
 (module test
-  (fn new_array_length size int -> int
-    (ret (call array_length (call array_new size))))
+  (fn new_array_length -> int
+    (ret (array_length (array_new))))
   
   (test-spec new_array_length
-    (case "create array size 10"
-      (input 10)
-      (expect 0))
-    (case "create array size 0"
-      (input 0)
-      (expect 0))
-    (case "create array size 100"
-      (input 100)
+    (case "create array returns length 0"
+      (input)
       (expect 0)))
   
   (meta-note "Tests array_new creates empty arrays with array_length returning 0"))

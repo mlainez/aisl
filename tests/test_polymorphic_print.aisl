@@ -26,7 +26,7 @@
     (ret false))
   
   (fn test_print_comparison -> bool
-    (ret (call lt 5 10)))
+    (ret (lt 5 10)))
   
   (test-spec test_print_string
     (case "returns string value"

@@ -1,6 +1,6 @@
 (module test_file_io_complete
   (fn open_file_for_write filepath string -> int
-    (ret (call io_file_open filepath 1)))
+    (ret (io_file_open filepath 1)))
   
   (test-spec open_file_for_write
     (case "open file for writing"
@@ -9,7 +9,7 @@
       (expect 3)))
   
   (fn write_single_line fd int line string -> int
-    (ret (call io_file_write fd line)))
+    (ret (io_file_write fd line)))
   
   (test-spec write_single_line
     (case "write line to file descriptor"
@@ -18,7 +18,7 @@
       (expect 26)))
   
   (fn open_file_for_read filepath string -> int
-    (ret (call io_file_open filepath 0)))
+    (ret (io_file_open filepath 0)))
   
   (test-spec open_file_for_read
     (case "open file for reading"
@@ -27,7 +27,7 @@
       (expect 4)))
   
   (fn read_from_fd fd int -> string
-    (ret (call io_file_read fd)))
+    (ret (io_file_read fd)))
   
   (test-spec read_from_fd
     (case "read content from file descriptor"

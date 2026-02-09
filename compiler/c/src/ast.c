@@ -50,6 +50,10 @@ Type* type_float() {
     return type_new(TYPE_FLOAT);
 }
 
+Type* type_decimal() {
+    return type_new(TYPE_DECIMAL);
+}
+
 Type* type_array(Type* element) {
     Type* t = type_new(TYPE_ARRAY);
     t->data.generic.element_type = element;

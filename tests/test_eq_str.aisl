@@ -1,6 +1,6 @@
 (module test_eq_strings
   (fn test_string_equals s1 string s2 string -> bool
-    (ret (call string_equals s1 s2)))
+    (ret (string_equals s1 s2)))
   
   (test-spec test_string_equals
     (case "returns true for identical strings"

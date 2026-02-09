@@ -2,9 +2,9 @@
   (fn test_loop -> int
     (set count int 0)
     (loop
-      (call print "In loop")
-      (set count int (call add count 1))
-      (if (call ge count 3)
+      (print "In loop")
+      (set count int (add count 1))
+      (if (ge count 3)
         (break)))
     (ret count))
 

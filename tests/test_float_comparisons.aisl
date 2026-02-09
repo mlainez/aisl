@@ -1,6 +1,6 @@
 (module test
   (fn eq_f32 a float b float -> bool
-    (ret (call eq a b)))
+    (ret (eq a b)))
   
   (test-spec eq_f32
     (case "equal float"
@@ -11,7 +11,7 @@
       (expect 0)))
   
   (fn lt_f32 a float b float -> bool
-    (ret (call lt a b)))
+    (ret (lt a b)))
   
   (test-spec lt_f32
     (case "less than float"
@@ -22,7 +22,7 @@
       (expect 0)))
   
   (fn gt_f32 a float b float -> bool
-    (ret (call gt a b)))
+    (ret (gt a b)))
   
   (test-spec gt_f32
     (case "greater than float"
@@ -33,7 +33,7 @@
       (expect 0)))
   
   (fn eq_f64 a float b float -> bool
-    (ret (call eq a b)))
+    (ret (eq a b)))
   
   (test-spec eq_f64
     (case "equal float pi"
@@ -44,7 +44,7 @@
       (expect 0)))
   
   (fn lt_f64 a float b float -> bool
-    (ret (call lt a b)))
+    (ret (lt a b)))
   
   (test-spec lt_f64
     (case "less than float"
@@ -55,7 +55,7 @@
       (expect 0)))
   
   (fn gt_f64 a float b float -> bool
-    (ret (call gt a b)))
+    (ret (gt a b)))
   
   (test-spec gt_f64
     (case "greater than float"

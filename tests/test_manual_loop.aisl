@@ -8,11 +8,11 @@
       (expect 45)))
   
   (fn sum_range start int end int -> int
-    (if (call ge start end)
+    (if (ge start end)
       (ret 0))
-    (set next int (call add start 1))
-    (set rest int (call sum_range next end))
-    (ret (call add start rest)))
+    (set next int (add start 1))
+    (set rest int (sum_range next end))
+    (ret (add start rest)))
   
   (test-spec sum_range
     (case "sum 0 to 10"

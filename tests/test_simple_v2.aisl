@@ -1,7 +1,7 @@
 (module simple_tests
 
   (fn add a int b int -> int
-    (ret (call add a b)))
+    (ret (add a b)))
   
   (test-spec add
     (case "simple addition"

@@ -1,8 +1,8 @@
 (module test_abs_clone
   (fn abs x int -> int
-    (set is_neg bool (call lt x 0))
+    (set is_neg bool (lt x 0))
     (if is_neg
-      (ret (call neg x)))
+      (ret (neg x)))
     (ret x))
   
   (test-spec abs

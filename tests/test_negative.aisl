@@ -8,7 +8,7 @@
       (expect -5)))
   
   (fn negate x int -> int
-    (ret (call sub 0 x)))
+    (ret (sub 0 x)))
   
   (test-spec negate
     (case "negate 10"

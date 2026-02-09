@@ -1,6 +1,6 @@
 (module test_gc
   (fn get_gc_stats -> array
-    (ret (call gc_stats)))
+    (ret (gc_stats)))
   
   (test-spec get_gc_stats
     (case "get initial GC statistics"
@@ -9,7 +9,7 @@
       (expect "stats_array")))
   
   (fn create_array size int -> array
-    (ret (call ArrayNew size)))
+    (ret (ArrayNew size)))
   
   (test-spec create_array
     (case "create array of size 10"
@@ -22,7 +22,7 @@
       (expect "array_20")))
   
   (fn set_array_value arr array idx int val int -> array
-    (call ArraySet arr idx val)
+    (ArraySet arr idx val)
     (ret arr))
   
   (test-spec set_array_value
@@ -32,7 +32,7 @@
       (expect "array_10")))
   
   (fn get_array_value arr array idx int -> int
-    (ret (call ArrayGet arr idx)))
+    (ret (ArrayGet arr idx)))
   
   (test-spec get_array_value
     (case "get bytes allocated from stats"
@@ -45,7 +45,7 @@
       (expect 2048)))
   
   (fn trigger_gc -> int
-    (call gc_collect)
+    (gc_collect)
     (ret 0))
   
   (test-spec trigger_gc

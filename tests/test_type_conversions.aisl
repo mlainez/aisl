@@ -1,6 +1,6 @@
 (module test
   (fn i64_to_f64 x int -> float
-    (ret (call cast_i64_f64 x)))
+    (ret (cast_i64_f64 x)))
   
   (test-spec i64_to_f64
     (case "convert 42 to float"
@@ -14,7 +14,7 @@
       (expect -10.0)))
   
   (fn f64_to_i64 x float -> int
-    (ret (call cast_f64_i64 x)))
+    (ret (cast_f64_i64 x)))
   
   (test-spec f64_to_i64
     (case "truncate 99.99 to int"

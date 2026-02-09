@@ -26,6 +26,7 @@ typedef enum {
     VAL_TCP_SOCKET,
     VAL_UDP_SOCKET,
     VAL_FUTURE,
+    VAL_DECIMAL,      // BigDecimal type for arbitrary precision
     
     VAL_I8,
     VAL_I16,
@@ -85,6 +86,7 @@ typedef struct {
         bool bool_val;
         void* ptr_val;
         Obj* obj;               // GC-managed object
+        char* decimal_val;      // For VAL_DECIMAL - string representation of arbitrary precision decimal
         
         // Explicit integer types
         int8_t i8_val;

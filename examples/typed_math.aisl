@@ -1,7 +1,7 @@
 (module math
   (fn main -> int
-    (call print (call add 10 32))
-    (call print (call mul 6 7))
-    (call print (call sub 100 42))
+    (print (add 10 32))
+    (print (mul 6 7))
+    (print (sub 100 42))
     (ret 0)))
 

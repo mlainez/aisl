@@ -1,11 +1,11 @@
 (module test_file_io
   (fn write_and_read_file filepath string -> string
-    (set fd_write int (call io_file_open filepath 1))
-    (call io_file_write fd_write "Hello from AISL!")
-    (call io_file_close fd_write)
-    (set fd_read int (call io_file_open filepath 0))
-    (set content string (call io_file_read fd_read))
-    (call io_file_close fd_read)
+    (set fd_write int (io_file_open filepath 1))
+    (io_file_write fd_write "Hello from AISL!")
+    (io_file_close fd_write)
+    (set fd_read int (io_file_open filepath 0))
+    (set content string (io_file_read fd_read))
+    (io_file_close fd_read)
     (ret content))
   
   (test-spec write_and_read_file

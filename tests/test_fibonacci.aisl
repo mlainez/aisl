@@ -1,14 +1,14 @@
 (module fibonacci
   (fn fib_nth n int -> int
-    (if (call eq n 0)
+    (if (eq n 0)
       (ret 0))
-    (if (call eq n 1)
+    (if (eq n 1)
       (ret 1))
-    (set n_minus_1 int (call sub n 1))
-    (set n_minus_2 int (call sub n 2))
-    (set fib1 int (call fib_nth n_minus_1))
-    (set fib2 int (call fib_nth n_minus_2))
-    (ret (call add fib1 fib2)))
+    (set n_minus_1 int (sub n 1))
+    (set n_minus_2 int (sub n 2))
+    (set fib1 int (fib_nth n_minus_1))
+    (set fib2 int (fib_nth n_minus_2))
+    (ret (add fib1 fib2)))
   
   (test-spec fib_nth
     (case "fibonacci 0"

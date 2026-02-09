@@ -2,7 +2,7 @@
   (import http)
   
   (fn get_status_text status int -> string
-    (ret (call get_status_text status)))
+    (ret (get_status_text status)))
   
   (test-spec get_status_text
     (case "returns 200 OK for status 200"
