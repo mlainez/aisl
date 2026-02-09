@@ -128,32 +128,16 @@ Not "both syntaxes work", not "old is deprecated" - ONE canonical form, period.
 Examples:
 - Function params: `a int b int` (NOT `((a int) (b int))`)
 - Module keyword: `module` (NOT `mod` - conflicts with modulo)
-- Explicit call: `(add a b)` (NOT implicit - just direct function call)
+- Explicit call: `(add a b)` (direct function call syntax)
 - Explicit types: `(set x int 42)` (NOT inferred)
 
 **LLMs want EXPLICIT not FLEXIBLE**
 
 Maximum explicitness = minimum ambiguity = LLM-friendly
 
-@(runtime-errors)
+@(reserved-type-keywords)
 
-**✅ FIXED: Reserved type keywords used as variable names cause silent failures**
-
-Issue:
-```
-(set json string "{\"model\":\"codellama\"}")  ; json is TYPE keyword
-(print json_str)                              ; Would print garbage before fix
-```
-
-Root cause:
-- Lexer tokenizes 'json' as TOK_TYPE_JSON not TOK_IDENTIFIER
-- Parser was accepting it
-- VM treated as type confusion
-- Silent runtime failure (prints wrong value, crashes on string ops)
-
-**Fix**:
-- Added parser check in `parser.c:512-533` to reject type keywords as variable names
-- Error message: "Cannot use type keyword 'X' as variable name. Use a descriptive name instead (e.g., 'X_data', 'X_value')"
+**Type keywords cannot be used as variable names**
 
 Reserved keywords that CANNOT be variable names:
 - int, float, string, bool
@@ -162,310 +146,125 @@ Reserved keywords that CANNOT be variable names:
 - channel, future, unit
 
 Recommended variable names:
-- Use json_str, json_data, json_obj instead of json
-- Use arr, data_array instead of array
-- Use hashmap, value_map instead of map
+- json_str, json_data, json_obj instead of json
+- arr, data_array instead of array
+- hashmap, value_map instead of map
 
-@(vm-crash-uninitialized-tls)
+Parser error message:
+"Cannot use type keyword 'X' as variable name. Use a descriptive name instead (e.g., 'X_data', 'X_value')"
 
-**✅ FIXED: VM crash after 2-5 requests due to uninitialized TLS fields**
+@(core-ir-constructs)
 
-Issue:
-```
-Request 1-4: ✓ Success
-Request 5: ✗ CRASH in tcp_receive() at line 754
-```
+**Core IR constructs are NOT function calls**
 
-Root cause in `vm.c:655-671` (tcp_accept function):
-- `tcp_accept()` allocated Socket struct but only initialized `is_udp` field
-- Left `is_tls`, `ssl`, `ssl_ctx` fields UNINITIALIZED
-- Random memory values made `is_tls` appear true
-- `tcp_receive()` checked uninitialized `is_tls` → called `SSL_read()` with garbage pointer → SEGFAULT
+Core IR primitives (use directly, no call keyword):
+- `(label name)` - Mark jump target
+- `(goto target)` - Unconditional jump to label
+- `(ifnot condition target)` - Jump to label if condition is false
 
-**Fix**:
-Added proper initialization in `tcp_accept()`:
-```c
-client_sock->is_tls = false;
-client_sock->ssl = NULL;
-client_sock->ssl_ctx = NULL;
-```
-
-Location: `compiler/c/src/vm.c:655-671`
-
-**STATUS**: ✅ FIXED - All socket tests pass reliably
-
-@(core-ir-syntax-confusion)
-
-**DISCOVERED: Core IR constructs are NOT function calls**
-
-Common LLM mistake:
-```
-(label my_label)        ; Core IR construct
-(goto my_label)         ; Core IR construct
-(ifnot flag skip)       ; Core IR construct
-```
-
-Correct syntax:
-```
-(label my_label)        ; Core IR construct
-(goto my_label)         ; Core IR construct
-(ifnot flag skip)       ; Core IR construct
-```
-
-Explanation:
-- label/goto/ifnot are Core IR primitives, not functions
-- They have special parsing rules
-- Parser recognizes them as statement types directly
-
-When to use:
-- label: Mark jump target
-- goto: Unconditional jump to label
-- ifnot: Jump to label if condition is false
+These are statement types in the parser, not function calls. Do NOT use `(call label ...)` etc.
 
 Prefer Agent constructs when possible:
 - while/loop instead of label/goto
 - if instead of ifnot
 - break/continue for loop control
 
-**FOR LLMs**: Use label/goto/ifnot only for complex control flow that can't be expressed with while/loop/break/continue
+Use label/goto/ifnot only for complex control flow that can't be expressed with while/loop/break/continue.
 
-@(multiple-ret-restriction)
+@(multiple-ret-pattern)
 
-**DISCOVERED: Cannot have multiple ret statements after labels in simple functions**
+**Use result variable pattern for conditional returns**
 
-Pattern that FAILS:
+Instead of:
 ```
 (fn example flag bool -> string
   (ifnot flag return_b)
-  (ret "A")              ; First ret
-  (label return_b)       ; Parse error - code after ret
+  (ret "A")
+  (label return_b)
   (ret "B"))
 ```
 
-Parser rejects this because:
-- ret is supposed to end function execution
-- Code after ret is unreachable in simple analysis
-- label after ret violates this assumption
-
-**WORKAROUND**: Use result variable with single ret:
+Use:
 ```
 (fn example flag bool -> string
-  (set result string "B")   ; Default value
-  (ifnot flag skip)         ; Jump if condition false
-  (set result string "A")   ; Override if not jumped
+  (set result string "B")
+  (ifnot flag skip)
+  (set result string "A")
   (label skip)
-  (ret result))             ; Single ret at end
+  (ret result))
 ```
 
 Pattern:
-1. Initialize result variable with default/fallback value
+1. Initialize result variable with default value
 2. Use ifnot to skip override logic
-3. Set result to primary value if not skipped
-4. Place label after override
-5. Single ret result at end
+3. Single ret at end
 
-**FOR LLMs**: Always use result variable + single ret pattern for conditional returns
+@(if-statement-workaround)
 
-@(if-statement-multi-stmt-bug-2026-02-08)
+**Parser limitation: if-then-else not yet implemented**
 
-**CRITICAL BUG: Parser treats ALL statements after if condition as then-branch**
+The parser treats ALL statements after if condition as then-branch. No else-branch support yet.
 
-**STATUS**: Known bug, workaround documented
-
-Problem: Parser at compiler/c/src/parser.c lines 681-706 parses ALL remaining statements after an if condition as part of the then-branch, making it impossible to have proper if-then-else logic.
-
-Example of bug:
-```aisl
-(if condition
-  (print "then 1")
-  (set x int 1)        ; ❌ Always executes regardless of condition!
-  (print "else")) ; ❌ Always executes regardless of condition!
+Workaround - use result variable pattern:
 ```
-
-What happens: The parser treats everything after the condition as a single sequence in the then-branch. There's no way to specify an else-branch.
-
-**WORKAROUND - Result Variable Pattern**:
-```aisl
-; Store condition result in a variable
 (set success bool (compile_test file))
-
-; Then-branch: only executes if true
 (if success
-  (print "✓ passed")
-  (set passed int (add passed 1)))
-
-; Else-branch: only executes if false
+  (print "passed"))
 (if (not success)
-  (print "✗ failed"))
+  (print "failed"))
 ```
 
-Why this works: Each `if` is independent, and we control which one executes by using `(not ...)`.
-
-Alternative: Use result variable with multiple actions
-```aisl
-; Set a default value
-(set message string "failed")
-
-; Override if condition is true
-(if (gt x 5)
-  (set message string "success")
-  (set x int 0))
-
-; message is now either "failed" or "success"
+Or:
+```
+(set message string "default")
+(if success
+  (set message string "modified"))
 (print message)
 ```
 
-**FOR LLMs**: ALWAYS use the result variable pattern for conditional logic with separate then/else branches.
+@(return-string-from-if)
 
-**Status**: The documented syntax `(if condition then_expr else_expr)` from AISL-AGENT.md is NOT YET IMPLEMENTED. Use workarounds above.
+**Never return string literals directly from if blocks**
 
-@(module-naming-restriction)
+Pattern that FAILS:
+```
+(fn test x int -> string
+  (if (lt x 0)
+    (ret "negative"))
+  (ret "positive"))
+```
 
-**DISCOVERED: Cannot name modules same as type keywords**
+ALWAYS use result variable:
+```
+(fn test x int -> string
+  (set result string "positive")
+  (if (lt x 0)
+    (set result string "negative"))
+  (ret result))
+```
 
-Problem: "json" is a TYPE keyword (TYPE_JSON, TOK_TYPE_JSON)
-- Parser tokenizes "json" as type, not identifier
-- Error: "Module '' not found" (empty string due to parse confusion)
-- Solution: Named module "json_utils" instead
+@(module-naming)
 
-**Rule**: NEVER name modules same as type keywords:
-- int, float, string, bool, json, array, map, result, option, regex
+**Never name modules same as type keywords**
 
-Use descriptive names instead:
+Type keywords: int, float, string, bool, json, array, map, result, option, regex
+
+Use descriptive names:
 - json_utils (NOT json)
 - array_helpers (NOT array)
 - string_utils (NOT string)
 - map_utils (NOT map)
 
-@(string-ret-from-if-bug)
+Module named with type keyword causes: "Module '' not found" error
 
-**DISCOVERED: Returning string literals from if blocks doesn't work**
+@(missing-module-paren)
 
-Pattern that FAILS:
-```aisl
-(fn test x int -> string
-  (set check bool (lt x 0))
-  (if check
-    (ret "negative"))
-  (ret "positive"))
+**Modules must end with closing parenthesis**
+
 ```
-
-Symptom: Always returns second value, if body never executes properly
-Affects: String literals only (int returns work fine)
-
-**WORKAROUND - Result variable pattern**:
-```aisl
-(fn test x int -> string
-  (set result string "positive")
-  (if check
-    (set result string "negative"))
-  (ret result))
-```
-
-**FOR LLMs**: NEVER return string literals directly from if blocks. Always use result variable pattern.
-
-@(missing-closing-paren-error)
-
-**DISCOVERED: Missing closing parenthesis causes confusing error**
-
-Problem: Missing closing ) for module causes "Module '' not found" error
-- Not "parse error" or "unexpected EOF"
-- Difficult to diagnose
-
-**Rule**: Always verify module has matching closing paren
-
-Example:
-```aisl
 (module my_module
   (fn func1 ...)
   (fn func2 ...))
-; Closing paren here ^
 ```
 
-@(process-exec-bug-fixed-2026-02-08)
-
-**FIXED: process_exec was terminating VM**
-
-Problem: OP_PROCESS_EXEC used execvp() which replaces entire process
-- VM would terminate on first call
-- Test runners couldn't execute multiple tests
-
-Root cause: execvp() replaces current process image
-- No return after execvp() succeeds
-- VM ceased to exist
-
-Fix implemented (vm.c:2509-2527):
-- Changed from execvp() to fork+exec+wait pattern
-- Uses existing process_spawn() and process_wait()
-- VM continues running after command completes
-- Returns exit code properly
-
-Status: ✅ FIXED - All test runners now work correctly
-
-@(test-framework-error-messages-fixed-2026-02-09)
-
-**✅ FIXED: Test framework error messages now show correct actual values**
-
-Issue 1: Test failures showed "Expected: X, Got: 0" instead of actual value
-
-Root cause:
-- Print operations (OP_PRINT_INT, OP_PRINT_STR, etc.) pop value, print it, push UNIT
-- Multiple prints in error message buried actual result under UNIT values on stack
-
-Fix (compiler.c:2690-2770):
-- Added OP_POP after each print to maintain stack integrity
-- Stack pattern: result → (print strings, pop UNITs) → result still on TOS
-- Now correctly shows: "Expected: 6, Got: 5"
-
-Issue 2: Float expected values not supported
-
-Fix (compiler.c:2640-2658):
-- Added EXPR_LIT_FLOAT handling in test-spec expected values
-- Added float comparison (OP_PUSH_FLOAT, OP_EQ_FLOAT)
-- Added float formatting (%g) in error messages
-- Now shows: "Expected: 3, Got: 3.333333333333333"
-
-Issue 3: Decimal error messages didn't print actual values correctly
-
-Context:
-- Decimal type stored as string internally (arbitrary precision)
-- Test expected values use string literals: (expect "15.75")
-
-Fix (compiler.c:2751-2756):
-- Convert decimal to string using OP_STR_FROM_DECIMAL before printing
-- Now shows: "Expected: 20, Got: 15"
-
-Test coverage:
-- Int error messages: ✓ Working
-- Bool error messages: ✓ Working
-- Float error messages: ✓ Working
-- Decimal error messages: ✓ Working
-
-Status: ✅ FIXED - All 131 tests pass with correct error messages
-
-@(result-type-removed-2026-02-09)
-
-**REMOVED: Result type for LLM simplicity**
-
-Decision: Result type removed to minimize concepts for LLM code generation
-
-Rationale:
-- Result type only used in 5/131 tests (3.8%)
-- Added 84% token overhead for error handling
-- Created decision paralysis (when to use Result vs panic)
-- No type system enforcement - just map convention
-- Panics provide clear feedback for LLM regeneration
-
-Changes:
-- Removed stdlib/core/result.aisl (59 lines)
-- Removed OP_FILE_READ_RESULT, OP_FILE_WRITE_RESULT opcodes
-- Removed result opcode implementations from vm.c
-- Removed result type from .aisl.grammar
-- Removed 5 test files using Result
-
-Pattern:
-- Operations panic on error with clear message
-- LLM regenerates with appropriate checks
-- No imports needed for error handling
-
-Status: ✅ REMOVED - Simpler language, fewer concepts for LLMs
+Missing closing ) causes confusing "Module '' not found" error
