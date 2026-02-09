@@ -404,3 +404,44 @@ Fix implemented (vm.c:2509-2527):
 - Returns exit code properly
 
 Status: ✅ FIXED - All test runners now work correctly
+
+@(test-framework-error-messages-fixed-2026-02-09)
+
+**✅ FIXED: Test framework error messages now show correct actual values**
+
+Issue 1: Test failures showed "Expected: X, Got: 0" instead of actual value
+
+Root cause:
+- Print operations (OP_PRINT_INT, OP_PRINT_STR, etc.) pop value, print it, push UNIT
+- Multiple prints in error message buried actual result under UNIT values on stack
+
+Fix (compiler.c:2690-2770):
+- Added OP_POP after each print to maintain stack integrity
+- Stack pattern: result → (print strings, pop UNITs) → result still on TOS
+- Now correctly shows: "Expected: 6, Got: 5"
+
+Issue 2: Float expected values not supported
+
+Fix (compiler.c:2640-2658):
+- Added EXPR_LIT_FLOAT handling in test-spec expected values
+- Added float comparison (OP_PUSH_FLOAT, OP_EQ_FLOAT)
+- Added float formatting (%g) in error messages
+- Now shows: "Expected: 3, Got: 3.333333333333333"
+
+Issue 3: Decimal error messages didn't print actual values correctly
+
+Context:
+- Decimal type stored as string internally (arbitrary precision)
+- Test expected values use string literals: (expect "15.75")
+
+Fix (compiler.c:2751-2756):
+- Convert decimal to string using OP_STR_FROM_DECIMAL before printing
+- Now shows: "Expected: 20, Got: 15"
+
+Test coverage:
+- Int error messages: ✓ Working
+- Bool error messages: ✓ Working
+- Float error messages: ✓ Working
+- Decimal error messages: ✓ Working
+
+Status: ✅ FIXED - All 131 tests pass with correct error messages

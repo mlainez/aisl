@@ -1615,6 +1615,27 @@ int vm_run(VM* vm) {
                 break;
             }
 
+            // Boolean comparison
+            case OP_EQ_BOOL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                bool eq = a.data.bool_val == b.data.bool_val;
+                Value result = {.type = VAL_BOOL, .data.bool_val = eq};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
+            case OP_NE_BOOL: {
+                Value b = pop(vm);
+                Value a = pop(vm);
+                bool ne = a.data.bool_val != b.data.bool_val;
+                Value result = {.type = VAL_BOOL, .data.bool_val = ne};
+                push(vm, result);
+                vm->ip++;
+                break;
+            }
+
             // Explicit boolean logical operations
             case OP_AND_BOOL: {
                 Value b = pop(vm);
@@ -3626,6 +3647,12 @@ void vm_disassemble(BytecodeProgram* program) {
                 break;
             case OP_NE_STR:
                 printf("NE_STR\n");
+                break;
+            case OP_EQ_BOOL:
+                printf("EQ_BOOL\n");
+                break;
+            case OP_NE_BOOL:
+                printf("NE_BOOL\n");
                 break;
             case OP_AND:
                 printf("AND\n");

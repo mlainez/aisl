@@ -1,5 +1,5 @@
 (module test_decimal_comprehensive
-  (fn decimal_negative_add_test ((a int) (b int) (expected int)) -> bool
+  (fn decimal_negative_add_test a int b int expected int -> bool
     (set da decimal (cast_int_decimal a))
     (set db decimal (cast_int_decimal b))
     (set sum decimal (add da db))
@@ -7,7 +7,7 @@
     (set matches bool (eq result_int expected))
     (ret matches))
   
-  (fn decimal_mul_test ((a int) (b int) (expected int)) -> bool
+  (fn decimal_mul_test a int b int expected int -> bool
     (set da decimal (cast_int_decimal a))
     (set db decimal (cast_int_decimal b))
     (set product decimal (mul da db))

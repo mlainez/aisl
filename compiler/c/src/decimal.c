@@ -255,11 +255,110 @@ char* decimal_add(const char* a, const char* b) {
         
         return result;
     } else {
-        char* b_neg = decimal_neg(b);
-        char* result = decimal_sub(a, b_neg);
-        free(b_neg);
+        // Different signs: convert to subtraction
+        // -5 + 10 becomes 10 - 5 = 5
+        // 10 + (-5) becomes 10 - 5 = 5
+        // We subtract the absolute values and determine the sign
+        
+        int abs_cmp = decimal_compare_absolute(a, b);
+        
+        if (abs_cmp == 0) {
+            // Equal absolute values, opposite signs: result is 0
+            decimal_free_parts(pa);
+            decimal_free_parts(pb);
+            return strdup("0");
+        }
+        
+        // Determine which has larger absolute value
+        const char* larger = abs_cmp > 0 ? a : b;
+        const char* smaller = abs_cmp > 0 ? b : a;
+        
+        // Result takes sign of the number with larger absolute value
+        bool result_negative = (abs_cmp > 0) ? pa.negative : pb.negative;
+        
+        DecimalParts pl = decimal_parse_parts(larger);
+        DecimalParts ps = decimal_parse_parts(smaller);
+        
+        // Now subtract absolute values
+        size_t frac_len_l = pl.fractional_part ? strlen(pl.fractional_part) : 0;
+        size_t frac_len_s = ps.fractional_part ? strlen(ps.fractional_part) : 0;
+        size_t max_frac = frac_len_l > frac_len_s ? frac_len_l : frac_len_s;
+        
+        char* frac_l = calloc(max_frac + 1, 1);
+        char* frac_s = calloc(max_frac + 1, 1);
+        
+        if (pl.fractional_part) strcpy(frac_l, pl.fractional_part);
+        if (ps.fractional_part) strcpy(frac_s, ps.fractional_part);
+        
+        for (size_t i = frac_len_l; i < max_frac; i++) frac_l[i] = '0';
+        for (size_t i = frac_len_s; i < max_frac; i++) frac_s[i] = '0';
+        
+        char* result_frac = malloc(max_frac + 2);
+        int borrow = 0;
+        
+        for (int i = max_frac - 1; i >= 0; i--) {
+            int digit_l = frac_l[i] - '0';
+            int digit_s = frac_s[i] - '0';
+            int diff = digit_l - digit_s - borrow;
+            if (diff < 0) {
+                diff += 10;
+                borrow = 1;
+            } else {
+                borrow = 0;
+            }
+            result_frac[i] = diff + '0';
+        }
+        result_frac[max_frac] = '\0';
+        
+        size_t len_l = strlen(pl.integer_part);
+        size_t len_s = strlen(ps.integer_part);
+        size_t max_len = (len_l > len_s ? len_l : len_s) + 2;
+        
+        char* result_int = calloc(max_len, 1);
+        int pos = 0;
+        
+        int i = len_l - 1;
+        int j = len_s - 1;
+        
+        while (i >= 0 || j >= 0) {
+            int digit_l = (i >= 0) ? (pl.integer_part[i] - '0') : 0;
+            int digit_s = (j >= 0) ? (ps.integer_part[j] - '0') : 0;
+            int diff = digit_l - digit_s - borrow;
+            if (diff < 0) {
+                diff += 10;
+                borrow = 1;
+            } else {
+                borrow = 0;
+            }
+            result_int[pos++] = diff + '0';
+            i--;
+            j--;
+        }
+        result_int[pos] = '\0';
+        
+        // Reverse result_int
+        for (int k = 0; k < pos / 2; k++) {
+            char tmp = result_int[k];
+            result_int[k] = result_int[pos - 1 - k];
+            result_int[pos - 1 - k] = tmp;
+        }
+        
+        DecimalParts result_parts;
+        result_parts.negative = result_negative;
+        result_parts.integer_part = result_int;
+        result_parts.fractional_part = result_frac;
+        
+        char* result = decimal_from_parts(result_parts);
+        
+        free(frac_l);
+        free(frac_s);
+        free(result_int);
+        free(result_frac);
         decimal_free_parts(pa);
         decimal_free_parts(pb);
+        decimal_free_parts(pl);
+        decimal_free_parts(ps);
+        
         return result;
     }
 }

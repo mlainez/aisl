@@ -1,0 +1,10 @@
+(module test_empty_input
+  (fn get_constant -> int
+    (ret 42))
+  
+  (test-spec get_constant
+    (case "returns constant"
+      (input)
+      (expect 42)))
+  
+  (meta-note "Test function with no parameters"))

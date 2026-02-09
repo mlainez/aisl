@@ -73,6 +73,10 @@ typedef enum {
     OP_EQ_STR,
     OP_NE_STR,
 
+    // Comparison - bool
+    OP_EQ_BOOL,
+    OP_NE_BOOL,
+
     // Logical
     OP_AND_BOOL,
     OP_OR_BOOL,

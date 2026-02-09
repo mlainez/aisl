@@ -5,6 +5,7 @@
 #include "ast_export.h"
 #include "desugar.h"
 #include "module_loader.h"
+#include "test_framework.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2477,25 +2478,8 @@ void compile_module(Compiler* comp, Module* module) {
         current = current->next;
     }
     
-    // If module has test-spec but no main, generate a dummy main that returns 0
-    // Test-spec validation happens at compile time, not runtime
-    if (has_test_spec && !has_main) {
-        // Declare main function
-        uint32_t main_idx = bytecode_declare_function(comp->program, "main", 0, 0);
-        compiler_add_function(comp, "main", main_idx, 0);
-        
-        // Set function start before emitting instructions
-        bytecode_set_function_start(comp->program, main_idx, comp->program->instruction_count);
-        
-        // Generate main body: just return 0
-        // (fn main -> int (ret 0))
-        Instruction push_zero = {.opcode = OP_PUSH_INT, .operand.int_val = 0};
-        Instruction ret = {.opcode = OP_RETURN};
-        bytecode_emit(comp->program, push_zero);
-        bytecode_emit(comp->program, ret);
-    }
     
-    // Declare all user-defined functions
+    // Declare all user-defined functions FIRST (so we can reference them later)
     current = module->definitions;
     while (current) {
         if (current->def->kind == DEF_FUNCTION) {
@@ -2509,6 +2493,299 @@ void compile_module(Compiler* comp, Module* module) {
             compiler_add_function(comp, current->def->name, idx, param_count);
         }
         current = current->next;
+    }
+    
+    // If module has test-spec but no main, generate a test execution main
+    // This generates bytecode that calls each test function and compares results
+    // NOTE: This must happen AFTER function declarations so we can find target functions
+    if (has_test_spec && !has_main) {
+        // Declare main function
+        uint32_t main_idx = bytecode_declare_function(comp->program, "main", 0, 0);
+        compiler_add_function(comp, "main", main_idx, 0);
+        
+        // Set function start before emitting instructions
+        bytecode_set_function_start(comp->program, main_idx, comp->program->instruction_count);
+        
+        // Collect all test-specs from the module
+        TestSpec** specs = NULL;
+        uint32_t spec_count = 0;
+        DefList* def_iter = module->definitions;
+        while (def_iter) {
+            if (def_iter->def->kind == DEF_TEST_SPEC) {
+                spec_count++;
+                specs = realloc(specs, sizeof(TestSpec*) * spec_count);
+                specs[spec_count - 1] = (TestSpec*)def_iter->def->data.test.test_spec;
+            }
+            def_iter = def_iter->next;
+        }
+        
+        // For each test spec, generate bytecode to execute tests
+        for (uint32_t si = 0; si < spec_count; si++) {
+            TestSpec* spec = specs[si];
+            
+            // Find the target function to test
+            FunctionInfo* target_func = NULL;
+            FunctionInfo* func_iter = comp->functions;
+            while (func_iter) {
+                if (strcmp(func_iter->name, spec->target_function) == 0) {
+                    target_func = func_iter;
+                    break;
+                }
+                func_iter = func_iter->next;
+            }
+            
+            if (!target_func) continue;  // Skip if function not found
+            
+            // Process each test case
+            TestCaseList* tc_list = spec->data.test_cases;
+            while (tc_list) {
+                TestCase* tc = tc_list->test_case;
+                
+                // Print test name
+                uint32_t desc_idx = bytecode_add_string(comp->program, tc->description);
+                Instruction push_desc = {.opcode = OP_PUSH_STRING, .operand.uint_val = desc_idx};
+                bytecode_emit(comp->program, push_desc);
+                Instruction print_desc = {.opcode = OP_PRINT_STR};
+                bytecode_emit(comp->program, print_desc);
+                
+                // Push input arguments onto stack
+                ExprList* arg_list = tc->input_args;
+                while (arg_list) {
+                    Expr* arg = arg_list->expr;
+                    
+                    switch (arg->kind) {
+                        case EXPR_LIT_INT: {
+                            Instruction push_arg = {.opcode = OP_PUSH_INT, .operand.int_val = arg->data.int_val};
+                            bytecode_emit(comp->program, push_arg);
+                            break;
+                        }
+                        case EXPR_LIT_FLOAT: {
+                            Instruction push_arg = {.opcode = OP_PUSH_FLOAT, .operand.float_val = arg->data.float_val};
+                            bytecode_emit(comp->program, push_arg);
+                            break;
+                        }
+                        case EXPR_LIT_STRING: {
+                            uint32_t str_idx = bytecode_add_string(comp->program, arg->data.string_val);
+                            Instruction push_arg = {.opcode = OP_PUSH_STRING, .operand.uint_val = str_idx};
+                            bytecode_emit(comp->program, push_arg);
+                            break;
+                        }
+                        case EXPR_LIT_BOOL: {
+                            Instruction push_arg = {.opcode = OP_PUSH_BOOL, .operand.bool_val = arg->data.bool_val};
+                            bytecode_emit(comp->program, push_arg);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                    
+                    arg_list = arg_list->next;
+                }
+                
+                // Call the test function
+                Instruction call_func = {
+                    .opcode = OP_CALL,
+                    .operand.call = {
+                        .func_idx = target_func->index,
+                        .arg_count = target_func->param_count
+                    }
+                };
+                bytecode_emit(comp->program, call_func);
+                
+                // Duplicate result for error message (will be printed if test fails)
+                Instruction dup_result = {.opcode = OP_DUP};
+                bytecode_emit(comp->program, dup_result);
+                // Stack: result, result
+                
+                // Compare result with expected value
+                // Handle different expected value types
+                if (tc->expected->kind == EXPR_LIT_STRING) {
+                    // For string expected values (e.g. decimal results like "15")
+                    // Convert result to string first
+                    Instruction to_str = {.opcode = OP_STR_FROM_DECIMAL};
+                    bytecode_emit(comp->program, to_str);
+                    // Stack: result_str, result_original
+                    
+                    // Push expected value
+                    uint32_t exp_idx = bytecode_add_string(comp->program, tc->expected->data.string_val);
+                    Instruction push_exp = {.opcode = OP_PUSH_STRING, .operand.uint_val = exp_idx};
+                    bytecode_emit(comp->program, push_exp);
+                    // Stack: expected_str, result_str, result_original
+                    
+                    // Compare strings
+                    Instruction cmp = {.opcode = OP_EQ_STR};
+                    bytecode_emit(comp->program, cmp);
+                    // Stack: bool, result_original
+                } else if (tc->expected->kind == EXPR_LIT_BOOL) {
+                    // For boolean expected values
+                    // Result is already bool, just compare directly
+                    Instruction push_exp_bool = {.opcode = OP_PUSH_BOOL, .operand.bool_val = tc->expected->data.bool_val};
+                    bytecode_emit(comp->program, push_exp_bool);
+                    // Stack: expected_bool, result_bool, result_original
+                    
+                    // Compare booleans
+                    Instruction cmp = {.opcode = OP_EQ_BOOL};
+                    bytecode_emit(comp->program, cmp);
+                    // Stack: bool, result_original
+                } else if (tc->expected->kind == EXPR_LIT_INT) {
+                    // For integer expected values
+                    Instruction push_exp_int = {.opcode = OP_PUSH_INT, .operand.int_val = tc->expected->data.int_val};
+                    bytecode_emit(comp->program, push_exp_int);
+                    // Stack: expected_int, result_int, result_original
+                    
+                    // Compare integers
+                    Instruction cmp = {.opcode = OP_EQ_INT};
+                    bytecode_emit(comp->program, cmp);
+                    // Stack: bool, result_original
+                } else if (tc->expected->kind == EXPR_LIT_FLOAT) {
+                    // For float expected values
+                    Instruction push_exp_float = {.opcode = OP_PUSH_FLOAT, .operand.float_val = tc->expected->data.float_val};
+                    bytecode_emit(comp->program, push_exp_float);
+                    // Stack: expected_float, result_float, result_original
+                    
+                    // Compare floats
+                    Instruction cmp = {.opcode = OP_EQ_FLOAT};
+                    bytecode_emit(comp->program, cmp);
+                    // Stack: bool, result_original
+                } else {
+                    // Unsupported expected type - assume failure
+                    // Push false to indicate failure
+                    Instruction push_false = {.opcode = OP_PUSH_BOOL, .operand.bool_val = false};
+                    bytecode_emit(comp->program, push_false);
+                    // Pop the duplicate result value
+                    Instruction pop_result = {.opcode = OP_POP};
+                    bytecode_emit(comp->program, pop_result);
+                }
+                
+                // At this point, stack: bool, result_original
+                // Duplicate bool for conditional
+                Instruction dup_bool = {.opcode = OP_DUP};
+                bytecode_emit(comp->program, dup_bool);
+                // Stack: bool, bool, result_original
+                
+                // Jump to fail if false (JUMP_IF_FALSE pops the bool it checks)
+                // Pass path instructions: pop bool (1) + pop result (1) + push string (1) + print (1) + jump (1) = 5 instructions
+                uint32_t fail_addr = comp->program->instruction_count + 6;  // +1 for the JUMP_IF_FALSE itself
+                Instruction jmp_fail = {.opcode = OP_JUMP_IF_FALSE, .operand.uint_val = fail_addr};
+                bytecode_emit(comp->program, jmp_fail);
+                // Stack after jump (if true): bool, result_original
+                
+                // Pass case: pop both bool and result, then print " ✓\n"
+                Instruction pop_bool_pass = {.opcode = OP_POP};
+                bytecode_emit(comp->program, pop_bool_pass);
+                // Stack: result_original
+                Instruction pop_result_pass = {.opcode = OP_POP};
+                bytecode_emit(comp->program, pop_result_pass);
+                // Stack: empty
+                
+                uint32_t pass_msg_idx = bytecode_add_string(comp->program, " ✓\n");
+                Instruction push_pass = {.opcode = OP_PUSH_STRING, .operand.uint_val = pass_msg_idx};
+                bytecode_emit(comp->program, push_pass);
+                Instruction print_pass = {.opcode = OP_PRINT_STR};
+                bytecode_emit(comp->program, print_pass);
+                
+                // Jump over fail message
+                uint32_t jump_over_fail_location = comp->program->instruction_count;
+                Instruction jmp_end = {.opcode = OP_JUMP, .operand.uint_val = 0};  // Placeholder
+                bytecode_emit(comp->program, jmp_end);
+                
+                // Fail case: print " ✗ - Expected: <exp>, Got: <actual>\n"
+                // Stack when we get here: bool, result_original (because JUMP_IF_FALSE popped one bool)
+                
+                // Pop the remaining bool
+                Instruction pop_bool_fail = {.opcode = OP_POP};
+                bytecode_emit(comp->program, pop_bool_fail);
+                // Stack: result_original
+                
+                // Print failure marker
+                uint32_t fail_msg_idx = bytecode_add_string(comp->program, " ✗ - Expected: ");
+                Instruction push_fail = {.opcode = OP_PUSH_STRING, .operand.uint_val = fail_msg_idx};
+                bytecode_emit(comp->program, push_fail);
+                Instruction print_fail = {.opcode = OP_PRINT_STR};
+                bytecode_emit(comp->program, print_fail);
+                // Pop the UNIT value left by print
+                Instruction pop_unit_fail = {.opcode = OP_POP};
+                bytecode_emit(comp->program, pop_unit_fail);
+                
+                // Print expected value as string
+                char expected_str[256];
+                if (tc->expected->kind == EXPR_LIT_INT) {
+                    snprintf(expected_str, sizeof(expected_str), "%lld", tc->expected->data.int_val);
+                } else if (tc->expected->kind == EXPR_LIT_BOOL) {
+                    snprintf(expected_str, sizeof(expected_str), "%s", tc->expected->data.bool_val ? "true" : "false");
+                } else if (tc->expected->kind == EXPR_LIT_FLOAT) {
+                    snprintf(expected_str, sizeof(expected_str), "%g", tc->expected->data.float_val);
+                } else if (tc->expected->kind == EXPR_LIT_STRING) {
+                    snprintf(expected_str, sizeof(expected_str), "%s", tc->expected->data.string_val);
+                } else {
+                    snprintf(expected_str, sizeof(expected_str), "(unknown)");
+                }
+                uint32_t expected_str_idx = bytecode_add_string(comp->program, expected_str);
+                Instruction push_expected = {.opcode = OP_PUSH_STRING, .operand.uint_val = expected_str_idx};
+                bytecode_emit(comp->program, push_expected);
+                Instruction print_expected = {.opcode = OP_PRINT_STR};
+                bytecode_emit(comp->program, print_expected);
+                // Pop the UNIT value left by print
+                Instruction pop_unit1 = {.opcode = OP_POP};
+                bytecode_emit(comp->program, pop_unit1);
+                
+                // Print ", Got: "
+                uint32_t got_msg_idx = bytecode_add_string(comp->program, ", Got: ");
+                Instruction push_got = {.opcode = OP_PUSH_STRING, .operand.uint_val = got_msg_idx};
+                bytecode_emit(comp->program, push_got);
+                Instruction print_got = {.opcode = OP_PRINT_STR};
+                bytecode_emit(comp->program, print_got);
+                // Pop the UNIT value left by print
+                Instruction pop_unit2 = {.opcode = OP_POP};
+                bytecode_emit(comp->program, pop_unit2);
+                
+                // Now stack has just: result_original
+                // Print actual value
+                Instruction print_actual = {.opcode = OP_PRINT_INT};
+                if (tc->expected->kind == EXPR_LIT_INT) {
+                    print_actual.opcode = OP_PRINT_INT;
+                } else if (tc->expected->kind == EXPR_LIT_BOOL) {
+                    print_actual.opcode = OP_PRINT_BOOL;
+                } else if (tc->expected->kind == EXPR_LIT_FLOAT) {
+                    print_actual.opcode = OP_PRINT_FLOAT;
+                } else if (tc->expected->kind == EXPR_LIT_STRING) {
+                    // String expected means this is a decimal test
+                    // Convert decimal to string first
+                    Instruction to_str = {.opcode = OP_STR_FROM_DECIMAL};
+                    bytecode_emit(comp->program, to_str);
+                    print_actual.opcode = OP_PRINT_STR;
+                }
+                bytecode_emit(comp->program, print_actual);
+                // Pop the UNIT value left by print
+                Instruction pop_unit3 = {.opcode = OP_POP};
+                bytecode_emit(comp->program, pop_unit3);
+                
+                // Print newline
+                uint32_t newline_idx = bytecode_add_string(comp->program, "\n");
+                Instruction push_newline = {.opcode = OP_PUSH_STRING, .operand.uint_val = newline_idx};
+                bytecode_emit(comp->program, push_newline);
+                Instruction print_newline = {.opcode = OP_PRINT_STR};
+                bytecode_emit(comp->program, print_newline);
+                
+                // Pop the UNIT value left by print
+                Instruction pop_unit4 = {.opcode = OP_POP};
+                bytecode_emit(comp->program, pop_unit4);
+                
+                // Update the jump-over-fail instruction with correct address
+                uint32_t after_fail = comp->program->instruction_count;
+                comp->program->instructions[jump_over_fail_location].operand.uint_val = after_fail;
+                
+                tc_list = tc_list->next;
+            }
+        }
+        
+        // Return 0 (success)
+        Instruction push_zero = {.opcode = OP_PUSH_INT, .operand.int_val = 0};
+        Instruction ret = {.opcode = OP_RETURN};
+        bytecode_emit(comp->program, push_zero);
+        bytecode_emit(comp->program, ret);
+        
+        free(specs);
     }
 
     current = module->definitions;
