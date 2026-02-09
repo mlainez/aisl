@@ -1,6 +1,11 @@
 (module chat_client
   (fn main -> int
+    (print "Connecting to localhost:8080...")
     (set conn socket (tcp_connect "localhost" 8080))
-    (set msg string (stdin_read))
-    (tcp_send conn msg)
+    (print "Connected! Type messages and press Enter (Ctrl+C to quit)")
+
+    (loop
+      (set msg string (stdin_read))
+      (tcp_send conn msg))
+
     (ret 0)))

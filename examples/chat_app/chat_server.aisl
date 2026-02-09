@@ -2,15 +2,10 @@
   (fn main -> int
     (set port int 8080)
     (set server socket (tcp_listen port))
-    (print "Chat server started on port 8080")
-    (print "Run chat_client.aisl in another terminal")
-
-    (set clients array (array_new))
+    (print "Echo server on port 8080")
 
     (loop
       (set client socket (tcp_accept server))
-      (print "New client connected")
-
       (loop
         (set data string (tcp_receive client 1024))
         (if (eq (string_length data) 0)
