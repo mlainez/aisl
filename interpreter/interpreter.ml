@@ -88,7 +88,323 @@ let vmap_delete m keys k =
   Hashtbl.remove m k;
   keys := List.filter (fun x -> x <> k) !keys
 
-(* Helper to format decimal values - strips trailing dot (15. -> 15) *)
+(* ===== BigDecimal: String-based arbitrary precision arithmetic ===== *)
+
+(* Parse a decimal string into (negative, integer_digits, fractional_digits) *)
+(* e.g. "-123.45" -> (true, "123", "45"), "0.1" -> (false, "0", "1") *)
+let decimal_parse s =
+  let s = String.trim s in
+  let neg, s =
+    if String.length s > 0 && s.[0] = '-' then (true, String.sub s 1 (String.length s - 1))
+    else (false, s)
+  in
+  match String.split_on_char '.' s with
+  | [int_part] -> (neg, int_part, "")
+  | [int_part; frac_part] -> (neg, int_part, frac_part)
+  | _ -> raise (RuntimeError ("Invalid decimal: " ^ s))
+
+(* Pad fractional parts to same length *)
+let decimal_align_frac f1 f2 =
+  let len1 = String.length f1 and len2 = String.length f2 in
+  let max_len = max len1 len2 in
+  let pad s len = s ^ String.make (max_len - len) '0' in
+  (pad f1 len1, pad f2 len2, max_len)
+
+(* Remove leading zeros from integer part (keep at least "0") *)
+let strip_leading_zeros s =
+  let len = String.length s in
+  let i = ref 0 in
+  while !i < len - 1 && s.[!i] = '0' do incr i done;
+  String.sub s !i (len - !i)
+
+(* Remove trailing zeros from fractional part *)
+let strip_trailing_zeros s =
+  let len = String.length s in
+  let i = ref (len - 1) in
+  while !i >= 0 && s.[!i] = '0' do decr i done;
+  if !i < 0 then "" else String.sub s 0 (!i + 1)
+
+(* Normalize a decimal string: strip leading/trailing zeros *)
+let decimal_normalize s =
+  let (neg, int_part, frac_part) = decimal_parse s in
+  let int_part = strip_leading_zeros int_part in
+  let frac_part = strip_trailing_zeros frac_part in
+  let is_zero = int_part = "0" && frac_part = "" in
+  let sign = if neg && not is_zero then "-" else "" in
+  if frac_part = "" then sign ^ int_part
+  else sign ^ int_part ^ "." ^ frac_part
+
+(* Compare absolute values of two non-negative decimal strings *)
+(* Returns -1, 0, or 1 *)
+let decimal_compare_abs i1 f1 i2 f2 =
+  let i1 = strip_leading_zeros i1 and i2 = strip_leading_zeros i2 in
+  let len1 = String.length i1 and len2 = String.length i2 in
+  if len1 <> len2 then compare len1 len2
+  else
+    let c = String.compare i1 i2 in
+    if c <> 0 then c
+    else
+      let (f1', f2', _) = decimal_align_frac f1 f2 in
+      String.compare f1' f2'
+
+(* Add two non-negative decimal digit strings (int_part, frac_part) *)
+(* Returns (int_result, frac_result) *)
+let decimal_add_unsigned i1 f1 i2 f2 =
+  let (f1', f2', frac_len) = decimal_align_frac f1 f2 in
+  (* Combine into full digit strings: int_part + frac_part *)
+  let full1 = i1 ^ f1' and full2 = i2 ^ f2' in
+  (* Pad to same length *)
+  let max_len = max (String.length full1) (String.length full2) in
+  let pad s = String.make (max_len - String.length s) '0' ^ s in
+  let s1 = pad full1 and s2 = pad full2 in
+  (* Add digit by digit from right *)
+  let result = Bytes.make (max_len + 1) '0' in
+  let carry = ref 0 in
+  for i = max_len - 1 downto 0 do
+    let d = Char.code s1.[i] - 48 + Char.code s2.[i] - 48 + !carry in
+    Bytes.set result (i + 1) (Char.chr (48 + d mod 10));
+    carry := d / 10
+  done;
+  if !carry > 0 then Bytes.set result 0 (Char.chr (48 + !carry));
+  let full_result = Bytes.to_string result in
+  let total_len = String.length full_result in
+  let int_len = total_len - frac_len in
+  let int_result = strip_leading_zeros (String.sub full_result 0 int_len) in
+  let frac_result = if frac_len > 0 then String.sub full_result int_len frac_len else "" in
+  (int_result, frac_result)
+
+(* Subtract two non-negative decimals where a >= b *)
+(* Returns (int_result, frac_result) *)
+let decimal_sub_unsigned i1 f1 i2 f2 =
+  let (f1', f2', frac_len) = decimal_align_frac f1 f2 in
+  let full1 = i1 ^ f1' and full2 = i2 ^ f2' in
+  let max_len = max (String.length full1) (String.length full2) in
+  let pad s = String.make (max_len - String.length s) '0' ^ s in
+  let s1 = pad full1 and s2 = pad full2 in
+  let result = Bytes.make max_len '0' in
+  let borrow = ref 0 in
+  for i = max_len - 1 downto 0 do
+    let d = Char.code s1.[i] - Char.code s2.[i] - !borrow in
+    if d < 0 then begin
+      Bytes.set result i (Char.chr (48 + d + 10));
+      borrow := 1
+    end else begin
+      Bytes.set result i (Char.chr (48 + d));
+      borrow := 0
+    end
+  done;
+  let full_result = Bytes.to_string result in
+  let total_len = String.length full_result in
+  let int_len = total_len - frac_len in
+  let int_result = strip_leading_zeros (String.sub full_result 0 int_len) in
+  let frac_result = if frac_len > 0 then String.sub full_result int_len frac_len else "" in
+  (int_result, frac_result)
+
+(* Format (neg, int_part, frac_part) to decimal string *)
+let decimal_format neg int_part frac_part =
+  let frac_part = strip_trailing_zeros frac_part in
+  let int_part = strip_leading_zeros int_part in
+  let is_zero = int_part = "0" && frac_part = "" in
+  let sign = if neg && not is_zero then "-" else "" in
+  if frac_part = "" then sign ^ int_part
+  else sign ^ int_part ^ "." ^ frac_part
+
+(* BigDecimal addition *)
+let bigdecimal_add a b =
+  let (neg_a, ia, fa) = decimal_parse a in
+  let (neg_b, ib, fb) = decimal_parse b in
+  match neg_a, neg_b with
+  | false, false ->
+      let (ri, rf) = decimal_add_unsigned ia fa ib fb in
+      decimal_format false ri rf
+  | true, true ->
+      let (ri, rf) = decimal_add_unsigned ia fa ib fb in
+      decimal_format true ri rf
+  | false, true ->
+      let cmp = decimal_compare_abs ia fa ib fb in
+      if cmp >= 0 then
+        let (ri, rf) = decimal_sub_unsigned ia fa ib fb in
+        decimal_format false ri rf
+      else
+        let (ri, rf) = decimal_sub_unsigned ib fb ia fa in
+        decimal_format true ri rf
+  | true, false ->
+      let cmp = decimal_compare_abs ia fa ib fb in
+      if cmp > 0 then
+        let (ri, rf) = decimal_sub_unsigned ia fa ib fb in
+        decimal_format true ri rf
+      else
+        let (ri, rf) = decimal_sub_unsigned ib fb ia fa in
+        decimal_format false ri rf
+
+(* BigDecimal subtraction: a - b = a + (-b) *)
+let bigdecimal_sub a b =
+  let (neg_b, ib, fb) = decimal_parse b in
+  let neg_b' = not neg_b in
+  let b' = decimal_format neg_b' ib fb in
+  bigdecimal_add a b'
+
+(* BigDecimal multiplication *)
+let bigdecimal_mul a b =
+  let (neg_a, ia, fa) = decimal_parse a in
+  let (neg_b, ib, fb) = decimal_parse b in
+  let frac_places = String.length fa + String.length fb in
+  (* Multiply as integers *)
+  let num_a = ia ^ fa and num_b = ib ^ fb in
+  let len_a = String.length num_a and len_b = String.length num_b in
+  let result_len = len_a + len_b in
+  let result = Array.make result_len 0 in
+  for i = len_a - 1 downto 0 do
+    let da = Char.code num_a.[i] - 48 in
+    for j = len_b - 1 downto 0 do
+      let db = Char.code num_b.[j] - 48 in
+      let pos = (len_a - 1 - i) + (len_b - 1 - j) in
+      result.(pos) <- result.(pos) + da * db
+    done
+  done;
+  (* Carry propagation *)
+  for i = 0 to result_len - 2 do
+    result.(i + 1) <- result.(i + 1) + result.(i) / 10;
+    result.(i) <- result.(i) mod 10
+  done;
+  (* Convert to string (reversed) *)
+  let buf = Buffer.create result_len in
+  let started = ref false in
+  for i = result_len - 1 downto 0 do
+    if result.(i) <> 0 then started := true;
+    if !started then Buffer.add_char buf (Char.chr (result.(i) + 48))
+  done;
+  let digits = if Buffer.length buf = 0 then "0" else Buffer.contents buf in
+  (* Insert decimal point *)
+  let total_digits = String.length digits in
+  let result_neg = neg_a <> neg_b in
+  if frac_places = 0 then
+    decimal_format result_neg digits ""
+  else if total_digits <= frac_places then
+    let padded = String.make (frac_places - total_digits) '0' ^ digits in
+    decimal_format result_neg "0" padded
+  else
+    let int_part = String.sub digits 0 (total_digits - frac_places) in
+    let frac_part = String.sub digits (total_digits - frac_places) frac_places in
+    decimal_format result_neg int_part frac_part
+
+(* BigDecimal division with specified precision *)
+let bigdecimal_div a b ?(precision=20) () =
+  let (neg_a, ia, fa) = decimal_parse a in
+  let (neg_b, ib, fb) = decimal_parse b in
+  (* Check for division by zero *)
+  let b_is_zero = strip_leading_zeros ib = "0" && strip_trailing_zeros fb = "" in
+  if b_is_zero then raise (RuntimeError "Division by zero");
+  (* Convert to integers by removing decimal points *)
+  let num_a = ia ^ fa and num_b = ib ^ fb in
+  let scale_diff = String.length fa - String.length fb in
+  (* We need: (num_a / num_b) * 10^(-scale_diff) *)
+  (* Shift num_a by (precision + scale_diff) to get enough digits *)
+  let extra_zeros = precision + (if scale_diff < 0 then -scale_diff else 0) in
+  let shifted_a = num_a ^ String.make extra_zeros '0' in
+  (* Long division on digit strings *)
+  let dividend = ref (strip_leading_zeros shifted_a) in
+  let divisor = strip_leading_zeros num_b in
+  let divisor_len = String.length divisor in
+  (* Simple long division: repeatedly subtract *)
+  let quotient = Buffer.create 32 in
+  let remainder = Buffer.create 32 in
+  Buffer.add_string remainder "";
+  let rem = ref "" in
+  for i = 0 to String.length !dividend - 1 do
+    (* Bring down next digit *)
+    rem := strip_leading_zeros (!rem ^ String.make 1 !dividend.[i]);
+    (* Count how many times divisor goes into remainder *)
+    let count = ref 0 in
+    let cur_rem = ref !rem in
+    let continue_loop = ref true in
+    while !continue_loop do
+      let rem_len = String.length !cur_rem in
+      if rem_len < divisor_len then
+        continue_loop := false
+      else if rem_len > divisor_len then begin
+        (* Remainder is larger, can subtract *)
+        (* Do subtraction *)
+        let sub_result = Bytes.make rem_len '0' in
+        let borrow = ref 0 in
+        let padded_div = String.make (rem_len - divisor_len) '0' ^ divisor in
+        for j = rem_len - 1 downto 0 do
+          let d = Char.code !cur_rem.[j] - Char.code padded_div.[j] - !borrow in
+          if d < 0 then begin
+            Bytes.set sub_result j (Char.chr (48 + d + 10));
+            borrow := 1
+          end else begin
+            Bytes.set sub_result j (Char.chr (48 + d));
+            borrow := 0
+          end
+        done;
+        cur_rem := strip_leading_zeros (Bytes.to_string sub_result);
+        incr count
+      end else begin
+        (* Same length, compare *)
+        if String.compare !cur_rem divisor >= 0 then begin
+          let sub_result = Bytes.make rem_len '0' in
+          let borrow = ref 0 in
+          for j = rem_len - 1 downto 0 do
+            let d = Char.code !cur_rem.[j] - Char.code divisor.[j] - !borrow in
+            if d < 0 then begin
+              Bytes.set sub_result j (Char.chr (48 + d + 10));
+              borrow := 1
+            end else begin
+              Bytes.set sub_result j (Char.chr (48 + d));
+              borrow := 0
+            end
+          done;
+          cur_rem := strip_leading_zeros (Bytes.to_string sub_result);
+          incr count
+        end else
+          continue_loop := false
+      end
+    done;
+    Buffer.add_char quotient (Char.chr (48 + !count));
+    rem := !cur_rem
+  done;
+  ignore remainder;
+  let q_str = strip_leading_zeros (Buffer.contents quotient) in
+  (* The result has (precision + max(0, -scale_diff)) fractional digits *)
+  (* But we also need to account for scale_diff *)
+  let frac_digits = precision + (if scale_diff > 0 then scale_diff else 0) in
+  let total_digits = String.length q_str in
+  let result_neg = neg_a <> neg_b in
+  if total_digits <= frac_digits then
+    let padded = String.make (frac_digits - total_digits) '0' ^ q_str in
+    decimal_format result_neg "0" padded
+  else
+    let int_part = String.sub q_str 0 (total_digits - frac_digits) in
+    let frac_part = String.sub q_str (total_digits - frac_digits) frac_digits in
+    decimal_format result_neg int_part frac_part
+
+(* BigDecimal negation *)
+let bigdecimal_neg a =
+  let (neg, i, f) = decimal_parse a in
+  let is_zero = strip_leading_zeros i = "0" && strip_trailing_zeros f = "" in
+  if is_zero then a
+  else decimal_format (not neg) i f
+
+(* BigDecimal absolute value *)
+let bigdecimal_abs a =
+  let (_, i, f) = decimal_parse a in
+  decimal_format false i f
+
+(* BigDecimal comparison: returns -1, 0, 1 *)
+let bigdecimal_compare a b =
+  let (neg_a, ia, fa) = decimal_parse a in
+  let (neg_b, ib, fb) = decimal_parse b in
+  let a_zero = strip_leading_zeros ia = "0" && strip_trailing_zeros fa = "" in
+  let b_zero = strip_leading_zeros ib = "0" && strip_trailing_zeros fb = "" in
+  if a_zero && b_zero then 0
+  else match neg_a, neg_b with
+  | false, true -> 1
+  | true, false -> -1
+  | false, false -> decimal_compare_abs ia fa ib fb
+  | true, true -> -(decimal_compare_abs ia fa ib fb)
+
+(* Helper to format decimal values - now just normalizes *)
 let format_decimal f =
   let s = string_of_float f in
   if String.ends_with ~suffix:"." s then
@@ -382,7 +698,7 @@ let rec values_equal v1 v2 =
   match v1, v2 with
   | VInt a, VInt b -> a = b
   | VFloat a, VFloat b -> a = b
-  | VDecimal s1, VDecimal s2 -> float_of_string s1 = float_of_string s2
+  | VDecimal s1, VDecimal s2 -> bigdecimal_compare s1 s2 = 0
   | VString a, VString b -> a = b
   | VBool a, VBool b -> a = b
   | VUnit, VUnit -> true
@@ -579,33 +895,24 @@ and eval_block env exprs =
         | [VInt a; VInt b] -> VInt (Int64.add a b)
         | [VFloat a; VFloat b] -> VFloat (a +. b)
         | [VDecimal a; VDecimal b] ->
-            let a_val = float_of_string a in
-            let b_val = float_of_string b in
-            let result = a_val +. b_val in
-            VDecimal (format_decimal result)
-        | _ -> raise (RuntimeError ("Invalid arguments to add")))
+             VDecimal (bigdecimal_add a b)
+         | _ -> raise (RuntimeError ("Invalid arguments to add")))
 
    | "sub" | "op_sub_i64" ->
        (match arg_vals with
         | [VInt a; VInt b] -> VInt (Int64.sub a b)
         | [VFloat a; VFloat b] -> VFloat (a -. b)
         | [VDecimal a; VDecimal b] ->
-            let a_val = float_of_string a in
-            let b_val = float_of_string b in
-            let result = a_val -. b_val in
-            VDecimal (format_decimal result)
-        | _ -> raise (RuntimeError "Invalid arguments to sub"))
+             VDecimal (bigdecimal_sub a b)
+         | _ -> raise (RuntimeError "Invalid arguments to sub"))
 
    | "mul" | "op_mul_i64" ->
        (match arg_vals with
         | [VInt a; VInt b] -> VInt (Int64.mul a b)
         | [VFloat a; VFloat b] -> VFloat (a *. b)
         | [VDecimal a; VDecimal b] ->
-            let a_val = float_of_string a in
-            let b_val = float_of_string b in
-            let result = a_val *. b_val in
-            VDecimal (format_decimal result)
-        | _ -> raise (RuntimeError "Invalid arguments to mul"))
+             VDecimal (bigdecimal_mul a b)
+         | _ -> raise (RuntimeError "Invalid arguments to mul"))
 
    | "div" | "op_div_i64" ->
        (match arg_vals with
@@ -616,13 +923,8 @@ and eval_block env exprs =
              if b = 0.0 then raise (RuntimeError "Division by zero")
              else VFloat (a /. b)
         | [VDecimal a; VDecimal b] ->
-            let b_val = float_of_string b in
-            if b_val = 0.0 then raise (RuntimeError "Division by zero")
-            else
-              let a_val = float_of_string a in
-              let result = a_val /. b_val in
-              VDecimal (format_decimal result)
-        | _ -> raise (RuntimeError "Invalid arguments to div"))
+             VDecimal (bigdecimal_div a b ~precision:20 ())
+         | _ -> raise (RuntimeError "Invalid arguments to div"))
   
   | "mod" | "op_mod_i64" ->
       (match arg_vals with
@@ -636,36 +938,32 @@ and eval_block env exprs =
        | [VInt a] -> VInt (Int64.neg a)
        | [VFloat a] -> VFloat (a *. -1.0)
        | [VDecimal a] ->
-           let f = float_of_string a in
-           VDecimal (format_decimal (f *. -1.0))
-       | _ -> raise (RuntimeError "Invalid arguments to neg"))
+            VDecimal (bigdecimal_neg a)
+        | _ -> raise (RuntimeError "Invalid arguments to neg"))
 
   | "abs" | "math_abs_i64" ->
       (match arg_vals with
        | [VInt a] -> VInt (if a < 0L then Int64.neg a else a)
        | [VFloat a] -> VFloat (abs_float a)
        | [VDecimal a] ->
-           let f = float_of_string a in
-           VDecimal (format_decimal (abs_float f))
-       | _ -> raise (RuntimeError "Invalid arguments to abs"))
+            VDecimal (bigdecimal_abs a)
+        | _ -> raise (RuntimeError "Invalid arguments to abs"))
 
   | "min" | "math_min_i64" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VInt (if a < b then a else b)
        | [VFloat a; VFloat b] -> VFloat (min a b)
        | [VDecimal a; VDecimal b] ->
-           let fa = float_of_string a and fb = float_of_string b in
-           if fa < fb then VDecimal a else VDecimal b
-       | _ -> raise (RuntimeError "Invalid arguments to min"))
+            if bigdecimal_compare a b <= 0 then VDecimal (decimal_normalize a) else VDecimal (decimal_normalize b)
+        | _ -> raise (RuntimeError "Invalid arguments to min"))
 
   | "max" | "math_max_i64" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VInt (if a > b then a else b)
        | [VFloat a; VFloat b] -> VFloat (max a b)
        | [VDecimal a; VDecimal b] ->
-           let fa = float_of_string a and fb = float_of_string b in
-           if fa > fb then VDecimal a else VDecimal b
-       | _ -> raise (RuntimeError "Invalid arguments to max"))
+            if bigdecimal_compare a b >= 0 then VDecimal (decimal_normalize a) else VDecimal (decimal_normalize b)
+        | _ -> raise (RuntimeError "Invalid arguments to max"))
 
   | "sqrt" | "math_sqrt_f64" ->
       (match arg_vals with
@@ -685,8 +983,8 @@ and eval_block env exprs =
         | [VBool a; VBool b] -> VBool (a = b)
         | [VString a; VString b] -> VBool (a = b)
          | [VDecimal a; VDecimal b] ->
-             VBool (float_of_string a = float_of_string b)
-         | [VArray _ as a; VArray _ as b] -> VBool (values_equal a b)
+              VBool (bigdecimal_compare a b = 0)
+          | [VArray _ as a; VArray _ as b] -> VBool (values_equal a b)
          | [VMap _ as a; VMap _ as b] -> VBool (values_equal a b)
          | [a; b] -> raise (RuntimeError ("eq requires arguments of the same type, got " ^ string_of_value_type a ^ " and " ^ string_of_value_type b))
          | _ -> raise (RuntimeError "Invalid arguments to eq"))
@@ -698,7 +996,7 @@ and eval_block env exprs =
         | [VBool a; VBool b] -> VBool (a <> b)
         | [VString a; VString b] -> VBool (a <> b)
          | [VDecimal a; VDecimal b] ->
-             VBool (float_of_string a <> float_of_string b)
+             VBool (bigdecimal_compare a b <> 0)
          | [VArray _ as a; VArray _ as b] -> VBool (not (values_equal a b))
          | [VMap _ as a; VMap _ as b] -> VBool (not (values_equal a b))
          | [a; b] -> raise (RuntimeError ("ne requires arguments of the same type, got " ^ string_of_value_type a ^ " and " ^ string_of_value_type b))
@@ -708,28 +1006,28 @@ and eval_block env exprs =
       (match arg_vals with
        | [VInt a; VInt b] -> VBool (a < b)
        | [VFloat a; VFloat b] -> VBool (a < b)
-       | [VDecimal a; VDecimal b] -> VBool (float_of_string a < float_of_string b)
+       | [VDecimal a; VDecimal b] -> VBool (bigdecimal_compare a b < 0)
        | _ -> raise (RuntimeError "Invalid arguments to lt"))
   
   | "gt" | "op_gt_i64" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VBool (a > b)
        | [VFloat a; VFloat b] -> VBool (a > b)
-       | [VDecimal a; VDecimal b] -> VBool (float_of_string a > float_of_string b)
+       | [VDecimal a; VDecimal b] -> VBool (bigdecimal_compare a b > 0)
        | _ -> raise (RuntimeError "Invalid arguments to gt"))
   
   | "le" | "op_le_i64" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VBool (a <= b)
        | [VFloat a; VFloat b] -> VBool (a <= b)
-       | [VDecimal a; VDecimal b] -> VBool (float_of_string a <= float_of_string b)
+       | [VDecimal a; VDecimal b] -> VBool (bigdecimal_compare a b <= 0)
        | _ -> raise (RuntimeError "Invalid arguments to le"))
   
   | "ge" | "op_ge_i64" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VBool (a >= b)
        | [VFloat a; VFloat b] -> VBool (a >= b)
-       | [VDecimal a; VDecimal b] -> VBool (float_of_string a >= float_of_string b)
+       | [VDecimal a; VDecimal b] -> VBool (bigdecimal_compare a b >= 0)
        | _ -> raise (RuntimeError "Invalid arguments to ge"))
 
   (* Logical operations *)
@@ -758,10 +1056,10 @@ and eval_block env exprs =
         (match arg_vals with
          | [VDecimal s] ->
              (* Handle fractional decimals by truncating toward zero *)
-             (try VInt (Int64.of_string s)
-              with Failure _ ->
-                try VInt (Int64.of_float (float_of_string s))
-                with Failure _ -> raise (RuntimeError ("Cannot convert decimal to int: " ^ s)))
+             let (neg, int_part, _) = decimal_parse s in
+             let int_part = strip_leading_zeros int_part in
+             let n = Int64.of_string int_part in
+             if neg then VInt (Int64.neg n) else VInt n
          | _ -> raise (RuntimeError "Invalid arguments to cast_decimal_int: expected decimal"))
 
    | "string_from_int" ->

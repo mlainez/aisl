@@ -1,0 +1,107 @@
+(module test_bigdecimal
+  (fn add_decimals -> decimal
+    (ret (add 0.1d 0.2d)))
+
+  (fn sub_decimals -> decimal
+    (ret (sub 29.99d 19.99d)))
+
+  (fn mul_decimals -> decimal
+    (ret (mul 3d 4.5d)))
+
+  (fn div_decimals -> decimal
+    (ret (div 10d 4d)))
+
+  (fn neg_decimal -> decimal
+    (ret (neg 42.5d)))
+
+  (fn abs_negative_decimal -> decimal
+    (ret (abs -19.99d)))
+
+  (fn compare_decimals_lt -> bool
+    (ret (lt 1.5d 2.5d)))
+
+  (fn compare_decimals_eq -> bool
+    (ret (eq 3.14d 3.14d)))
+
+  (fn compare_decimals_gt -> bool
+    (ret (gt 10d 5d)))
+
+  (fn min_decimals -> decimal
+    (ret (min 3.5d 2.5d)))
+
+  (fn max_decimals -> decimal
+    (ret (max 3.5d 2.5d)))
+
+  (fn decimal_to_int -> int
+    (ret (cast_decimal_int 42.9d)))
+
+  (fn int_to_decimal_add -> decimal
+    (set a decimal (cast_int_decimal 100))
+    (ret (add a 0.5d)))
+
+  (test-spec add_decimals
+    (case "0.1 + 0.2 equals 0.3 exactly"
+      (input)
+      (expect 0.3d)))
+
+  (test-spec sub_decimals
+    (case "29.99 - 19.99 equals 10"
+      (input)
+      (expect 10d)))
+
+  (test-spec mul_decimals
+    (case "3 * 4.5 equals 13.5"
+      (input)
+      (expect 13.5d)))
+
+  (test-spec div_decimals
+    (case "10 / 4 equals 2.5"
+      (input)
+      (expect 2.5d)))
+
+  (test-spec neg_decimal
+    (case "negation of 42.5 is -42.5"
+      (input)
+      (expect -42.5d)))
+
+  (test-spec abs_negative_decimal
+    (case "absolute value of -19.99 is 19.99"
+      (input)
+      (expect 19.99d)))
+
+  (test-spec compare_decimals_lt
+    (case "1.5 < 2.5 is true"
+      (input)
+      (expect true)))
+
+  (test-spec compare_decimals_eq
+    (case "3.14 == 3.14 is true"
+      (input)
+      (expect true)))
+
+  (test-spec compare_decimals_gt
+    (case "10 > 5 is true"
+      (input)
+      (expect true)))
+
+  (test-spec min_decimals
+    (case "min of 3.5 and 2.5 is 2.5"
+      (input)
+      (expect 2.5d)))
+
+  (test-spec max_decimals
+    (case "max of 3.5 and 2.5 is 3.5"
+      (input)
+      (expect 3.5d)))
+
+  (test-spec decimal_to_int
+    (case "42.9 truncated to int is 42"
+      (input)
+      (expect 42)))
+
+  (test-spec int_to_decimal_add
+    (case "100 cast to decimal plus 0.5 is 100.5"
+      (input)
+      (expect 100.5d)))
+
+  (meta-note "Tests BigDecimal arithmetic with d-suffix literals for precise decimal calculations"))

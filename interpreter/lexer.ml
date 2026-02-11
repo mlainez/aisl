@@ -6,6 +6,7 @@ type token =
   | Symbol of string
   | IntLit of int64
   | FloatLit of float
+  | DecimalLit of string
   | StringLit of string
   | BoolLit of bool
   | EOF
@@ -96,23 +97,31 @@ let tokenize input =
           let (str, next_pos) = read_string input (pos + 1) in
           loop next_pos (StringLit str :: acc)
       | '-' when pos + 1 < String.length input && is_digit input.[pos + 1] ->
-          let (num_str, next_pos) = read_number input pos in
-          let tok = 
-            if String.contains num_str '.' || String.contains num_str 'e' || String.contains num_str 'E' then
-              FloatLit (float_of_string num_str)
-            else
-              IntLit (Int64.of_string num_str)
-          in
-          loop next_pos (tok :: acc)
-      | '0'..'9' ->
-          let (num_str, next_pos) = read_number input pos in
-          let tok = 
-            if String.contains num_str '.' || String.contains num_str 'e' || String.contains num_str 'E' then
-              FloatLit (float_of_string num_str)
-            else
-              IntLit (Int64.of_string num_str)
-          in
-          loop next_pos (tok :: acc)
+           let (num_str, next_pos) = read_number input pos in
+           (* Check for 'd' suffix -> decimal literal *)
+           if next_pos < String.length input && input.[next_pos] = 'd' then
+             loop (next_pos + 1) (DecimalLit num_str :: acc)
+           else
+             let tok = 
+               if String.contains num_str '.' || String.contains num_str 'e' || String.contains num_str 'E' then
+                 FloatLit (float_of_string num_str)
+               else
+                 IntLit (Int64.of_string num_str)
+             in
+             loop next_pos (tok :: acc)
+       | '0'..'9' ->
+           let (num_str, next_pos) = read_number input pos in
+           (* Check for 'd' suffix -> decimal literal *)
+           if next_pos < String.length input && input.[next_pos] = 'd' then
+             loop (next_pos + 1) (DecimalLit num_str :: acc)
+           else
+             let tok = 
+               if String.contains num_str '.' || String.contains num_str 'e' || String.contains num_str 'E' then
+                 FloatLit (float_of_string num_str)
+               else
+                 IntLit (Int64.of_string num_str)
+             in
+             loop next_pos (tok :: acc)
       | _ when is_alpha c || is_symbol_char c ->
           let (sym, next_pos) = read_symbol input pos in
           let tok = match sym with
@@ -131,6 +140,7 @@ let string_of_token = function
   | Symbol s -> "Symbol(" ^ s ^ ")"
   | IntLit n -> "Int(" ^ Int64.to_string n ^ ")"
   | FloatLit f -> "Float(" ^ string_of_float f ^ ")"
+  | DecimalLit s -> "Decimal(" ^ s ^ "d)"
   | StringLit s -> "String(\"" ^ String.escaped s ^ "\")"
   | BoolLit b -> "Bool(" ^ string_of_bool b ^ ")"
   | EOF -> "EOF"

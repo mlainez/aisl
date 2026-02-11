@@ -66,6 +66,7 @@ let rec parse_expr state =
   match peek state with
   | IntLit n -> (LitInt n, advance state)
   | FloatLit f -> (LitFloat f, advance state)
+  | DecimalLit s -> (LitDecimal s, advance state)
   | StringLit s -> (LitString s, advance state)
   | BoolLit b -> (LitBool b, advance state)
   | Symbol s -> (Var s, advance state)
