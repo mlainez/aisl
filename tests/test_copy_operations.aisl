@@ -1,0 +1,89 @@
+(module test_copy_operations
+  (fn array_copy_is_independent -> bool
+    (set original array (array_new))
+    (array_push original 1)
+    (array_push original 2)
+    (array_push original 3)
+    (set copied array (array_copy original))
+    (array_push copied 4)
+    (set orig_len int (array_length original))
+    (ret (eq orig_len 3)))
+
+  (fn array_copy_has_same_values -> bool
+    (set original array (array_new))
+    (array_push original 10)
+    (array_push original 20)
+    (set copied array (array_copy original))
+    (ret (eq original copied)))
+
+  (fn array_copy_deep_nested -> bool
+    (set inner array (array_new))
+    (array_push inner 42)
+    (set original array (array_new))
+    (array_push original inner)
+    (set copied array (array_copy original))
+    (set inner_ref array (array_get original 0))
+    (array_push inner_ref 99)
+    (set copied_inner array (array_get copied 0))
+    (set copied_inner_len int (array_length copied_inner))
+    (ret (eq copied_inner_len 1)))
+
+  (fn map_copy_is_independent -> bool
+    (set original map (map_new))
+    (map_set original "x" 1)
+    (map_set original "y" 2)
+    (set copied map (map_copy original))
+    (map_set copied "z" 3)
+    (set has_z bool (map_has original "z"))
+    (ret (eq has_z false)))
+
+  (fn map_copy_has_same_values -> bool
+    (set original map (map_new))
+    (map_set original "a" 10)
+    (map_set original "b" 20)
+    (set copied map (map_copy original))
+    (ret (eq original copied)))
+
+  (fn map_copy_deep_nested -> bool
+    (set inner array (array_new))
+    (array_push inner 5)
+    (set original map (map_new))
+    (map_set original "data" inner)
+    (set copied map (map_copy original))
+    (set inner_ref array (map_get original "data"))
+    (array_push inner_ref 99)
+    (set copied_data array (map_get copied "data"))
+    (set copied_data_len int (array_length copied_data))
+    (ret (eq copied_data_len 1)))
+
+  (test-spec array_copy_is_independent
+    (case "modifying copy does not affect original"
+      (input)
+      (expect true)))
+
+  (test-spec array_copy_has_same_values
+    (case "copy has same values as original"
+      (input)
+      (expect true)))
+
+  (test-spec array_copy_deep_nested
+    (case "deep copy means nested arrays are independent"
+      (input)
+      (expect true)))
+
+  (test-spec map_copy_is_independent
+    (case "modifying copy does not affect original"
+      (input)
+      (expect true)))
+
+  (test-spec map_copy_has_same_values
+    (case "copy has same values as original"
+      (input)
+      (expect true)))
+
+  (test-spec map_copy_deep_nested
+    (case "deep copy means nested values are independent"
+      (input)
+      (expect true)))
+
+  (meta-note "Tests array_copy and map_copy produce independent deep copies"))

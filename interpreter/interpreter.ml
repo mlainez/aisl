@@ -377,11 +377,44 @@ let rec string_of_value = function
    | VChannel _ -> "<channel>"
    | VProcess pid -> "<process:" ^ string_of_int pid ^ ">"
 
-(* Compare values for test assertions *)
-let values_equal v1 v2 =
+(* Recursive structural equality for all value types *)
+let rec values_equal v1 v2 =
   match v1, v2 with
+  | VInt a, VInt b -> a = b
+  | VFloat a, VFloat b -> a = b
   | VDecimal s1, VDecimal s2 -> float_of_string s1 = float_of_string s2
-  | _ -> v1 = v2
+  | VString a, VString b -> a = b
+  | VBool a, VBool b -> a = b
+  | VUnit, VUnit -> true
+  | VArray a, VArray b ->
+      let a' = !a and b' = !b in
+      Array.length a' = Array.length b' &&
+      let rec check i =
+        if i >= Array.length a' then true
+        else values_equal a'.(i) b'.(i) && check (i + 1)
+      in check 0
+  | VMap (m1, keys1), VMap (m2, keys2) ->
+      let k1 = !keys1 and k2 = !keys2 in
+      List.length k1 = List.length k2 &&
+      List.for_all (fun k ->
+        Hashtbl.mem m2 k &&
+        values_equal (Hashtbl.find m1 k) (Hashtbl.find m2 k)
+      ) k1 &&
+      List.for_all (fun k -> Hashtbl.mem m1 k) k2
+  | _ -> false
+
+(* Deep copy a value (recursive for arrays and maps) *)
+let rec deep_copy_value v =
+  match v with
+  | VArray arr ->
+      VArray (ref (Array.map deep_copy_value !arr))
+  | VMap (m, keys) ->
+      let new_m = Hashtbl.create (Hashtbl.length m) in
+      List.iter (fun k ->
+        Hashtbl.replace new_m k (deep_copy_value (Hashtbl.find m k))
+      ) !keys;
+      VMap (new_m, ref (List.map Fun.id !keys))
+  | _ -> v  (* Primitives are immutable, no need to copy *)
 
 (* Evaluate expression *)
 let rec eval env expr =
@@ -652,8 +685,9 @@ and eval_block env exprs =
         | [VBool a; VBool b] -> VBool (a = b)
         | [VString a; VString b] -> VBool (a = b)
          | [VDecimal a; VDecimal b] ->
-             (* Normalize decimals through float for proper comparison *)
              VBool (float_of_string a = float_of_string b)
+         | [VArray _ as a; VArray _ as b] -> VBool (values_equal a b)
+         | [VMap _ as a; VMap _ as b] -> VBool (values_equal a b)
          | [a; b] -> raise (RuntimeError ("eq requires arguments of the same type, got " ^ string_of_value_type a ^ " and " ^ string_of_value_type b))
          | _ -> raise (RuntimeError "Invalid arguments to eq"))
   
@@ -665,6 +699,8 @@ and eval_block env exprs =
         | [VString a; VString b] -> VBool (a <> b)
          | [VDecimal a; VDecimal b] ->
              VBool (float_of_string a <> float_of_string b)
+         | [VArray _ as a; VArray _ as b] -> VBool (not (values_equal a b))
+         | [VMap _ as a; VMap _ as b] -> VBool (not (values_equal a b))
          | [a; b] -> raise (RuntimeError ("ne requires arguments of the same type, got " ^ string_of_value_type a ^ " and " ^ string_of_value_type b))
          | _ -> raise (RuntimeError "Invalid arguments to ne"))
   
@@ -873,12 +909,17 @@ and eval_block env exprs =
            VArray arr
        | _ -> raise (RuntimeError "Invalid arguments to array_set"))
 
-  | "array_length" | "ArrayLen" ->
-      (match arg_vals with
-       | [VArray arr] -> VInt (Int64.of_int (Array.length !arr))
-       | _ -> raise (RuntimeError "Invalid arguments to array_length"))
+   | "array_length" | "ArrayLen" ->
+       (match arg_vals with
+        | [VArray arr] -> VInt (Int64.of_int (Array.length !arr))
+        | _ -> raise (RuntimeError "Invalid arguments to array_length"))
 
-  (* Map operations *)
+   | "array_copy" ->
+       (match arg_vals with
+        | [VArray _ as v] -> deep_copy_value v
+        | _ -> raise (RuntimeError "Invalid arguments to array_copy"))
+
+   (* Map operations *)
   | "map_new" | "MapNew" ->
       make_vmap ()
   
@@ -908,11 +949,16 @@ and eval_block env exprs =
            VMap (m, keys)
        | _ -> raise (RuntimeError "Invalid arguments to map_delete"))
 
-  | "map_keys" | "MapKeys" ->
-      (match arg_vals with
-       | [VMap (_, keys)] ->
-           VArray (ref (Array.of_list (List.map (fun k -> VString k) !keys)))
-       | _ -> raise (RuntimeError "Invalid arguments to map_keys"))
+   | "map_keys" | "MapKeys" ->
+       (match arg_vals with
+        | [VMap (_, keys)] ->
+            VArray (ref (Array.of_list (List.map (fun k -> VString k) !keys)))
+        | _ -> raise (RuntimeError "Invalid arguments to map_keys"))
+
+   | "map_copy" ->
+       (match arg_vals with
+        | [VMap _ as v] -> deep_copy_value v
+        | _ -> raise (RuntimeError "Invalid arguments to map_copy"))
 
    (* Helper: read entire file *)
    | "file_read" ->
