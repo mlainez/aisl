@@ -91,6 +91,7 @@ and parse_sexpr state =
   | "goto" -> parse_goto state
   | "ifnot" -> parse_ifnot state
   | "try" -> parse_try state
+  | "cond" -> parse_cond state
   | _ -> parse_call sym state
 
 and parse_set state =
@@ -217,8 +218,25 @@ and parse_try state =
         let (expr, state) = parse_expr state in
         parse_try_body state (expr :: acc)
   in
-  let (try_body, catch_var, catch_type, catch_body, state) = parse_try_body state [] in
+   let (try_body, catch_var, catch_type, catch_body, state) = parse_try_body state [] in
   (Try (try_body, catch_var, catch_type, catch_body), state)
+
+and parse_cond state =
+  (* Parse branches: each is (condition body...) *)
+  let rec parse_branches state acc =
+    match peek state with
+    | RParen -> (List.rev acc, expect_token RParen state)
+    | LParen ->
+        let state = expect_token LParen state in
+        let (cond, state) = parse_expr state in
+        let (body, state) = parse_body_until_rparen state [] in
+        parse_branches state ((cond, body) :: acc)
+    | tok -> raise (ParseError ("Expected cond branch (condition body...) but got " ^ string_of_token tok))
+  in
+  let (branches, state) = parse_branches state [] in
+  if branches = [] then
+    raise (ParseError "cond requires at least one branch");
+  (Cond branches, state)
 
 and parse_call func_name state =
   let (args, state) = parse_args state [] in

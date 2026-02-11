@@ -27,6 +27,7 @@ type expr =
   | Goto of string
   | IfNot of expr * string  (* condition, label *)
   | Try of expr list * string * type_kind * expr list  (* try_body, catch_var, catch_type, catch_body *)
+  | Cond of (expr * expr list) list  (* list of (condition, body) branches *)
 
 (* Function parameter *)
 type param = {
@@ -104,4 +105,10 @@ let rec string_of_expr = function
   | Try (try_body, catch_var, catch_type, catch_body) ->
       let try_str = String.concat " " (List.map string_of_expr try_body) in
       let catch_str = String.concat " " (List.map string_of_expr catch_body) in
-      "(try " ^ try_str ^ " (catch " ^ catch_var ^ " " ^ string_of_type catch_type ^ " " ^ catch_str ^ "))"
+       "(try " ^ try_str ^ " (catch " ^ catch_var ^ " " ^ string_of_type catch_type ^ " " ^ catch_str ^ "))"
+  | Cond branches ->
+      let branch_strs = List.map (fun (cond, body) ->
+        let body_str = String.concat " " (List.map string_of_expr body) in
+        "(" ^ string_of_expr cond ^ " " ^ body_str ^ ")"
+      ) branches in
+      "(cond " ^ String.concat " " branch_strs ^ ")"

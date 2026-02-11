@@ -1,0 +1,99 @@
+(module test_cond
+
+  (fn classify_number n int -> string
+    (set result string "unknown")
+    (cond
+      ((lt n 0)
+        (set result string "negative"))
+      ((eq n 0)
+        (set result string "zero"))
+      ((lt n 10)
+        (set result string "small"))
+      ((lt n 100)
+        (set result string "medium"))
+      (true
+        (set result string "large")))
+    (ret result))
+
+  (fn grade_score score int -> string
+    (set result string "F")
+    (cond
+      ((ge score 90)
+        (set result string "A"))
+      ((ge score 80)
+        (set result string "B"))
+      ((ge score 70)
+        (set result string "C"))
+      ((ge score 60)
+        (set result string "D"))
+      (true
+        (set result string "F")))
+    (ret result))
+
+  (fn abs_value n int -> int
+    (set result int n)
+    (cond
+      ((lt n 0)
+        (set result int (sub 0 n)))
+      (true
+        (set result int n)))
+    (ret result))
+
+  (fn no_match_returns_unit flag bool -> int
+    (set result int 0)
+    (cond
+      (false
+        (set result int 99)))
+    (ret result))
+
+  (test-spec classify_number
+    (case "negative number"
+      (input -5)
+      (expect "negative"))
+    (case "zero"
+      (input 0)
+      (expect "zero"))
+    (case "small positive"
+      (input 7)
+      (expect "small"))
+    (case "medium number"
+      (input 42)
+      (expect "medium"))
+    (case "large number"
+      (input 500)
+      (expect "large")))
+
+  (test-spec grade_score
+    (case "A grade"
+      (input 95)
+      (expect "A"))
+    (case "B grade"
+      (input 85)
+      (expect "B"))
+    (case "C grade"
+      (input 75)
+      (expect "C"))
+    (case "D grade"
+      (input 65)
+      (expect "D"))
+    (case "F grade"
+      (input 50)
+      (expect "F")))
+
+  (test-spec abs_value
+    (case "negative becomes positive"
+      (input -10)
+      (expect 10))
+    (case "positive stays positive"
+      (input 5)
+      (expect 5))
+    (case "zero stays zero"
+      (input 0)
+      (expect 0)))
+
+  (test-spec no_match_returns_unit
+    (case "no branch matches so result unchanged"
+      (input true)
+      (expect 0)))
+
+  (meta-note "Tests the cond construct for flat multi-branch conditionals"))

@@ -777,7 +777,18 @@ let rec eval env expr =
            (match else_body with
             | Some body -> eval_block env body
             | None -> VUnit)
-       | _ -> raise (RuntimeError "If condition must be boolean"))
+        | _ -> raise (RuntimeError "If condition must be boolean"))
+
+  | Cond branches ->
+      let rec try_branches = function
+        | [] -> VUnit  (* no branch matched *)
+        | (cond, body) :: rest ->
+            (match eval env cond with
+             | VBool true -> eval_block env body
+             | VBool false -> try_branches rest
+             | _ -> raise (RuntimeError "Cond branch condition must be boolean"))
+      in
+      try_branches branches
 
   | And (left, right) ->
       (match eval env left with
