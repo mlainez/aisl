@@ -8,10 +8,10 @@
 AISL-Agent is the **ergonomic surface language** for writing AISL programs. It is:
 - **High-level**: Structured control flow (while, loop, break, continue)
 - **LLM-friendly**: Natural syntax that LLMs understand
-- **Desugared**: All Agent constructs compile to AISL-Core
+- **Desugared**: All Agent constructs are handled by the interpreter directly
 - **Extensible**: Can add new constructs without changing Core
 
-AISL-Agent is what LLMs should write. It desugars to AISL-Core during compilation.
+AISL-Agent is what LLMs should write. The interpreter handles Agent constructs directly during evaluation.
 
 ## Agent Constructs
 
@@ -120,36 +120,34 @@ Future: Native expression form.
 
 ## Desugaring Process
 
-The AISL compiler performs desugaring in these phases:
+The AISL interpreter handles Agent constructs directly during evaluation:
 
 1. **Parse** - Parse Agent syntax into AST
-2. **Type Check** - Verify types (operates on Agent AST)
-3. **Desugar** - Transform Agent AST → Core AST
-   - `while` → `label`/`goto`/`ifnot`
-   - `loop` → `label`/`goto`
-   - `break` → `goto loop_end`
-   - `continue` → `goto loop_start`
-4. **Compile** - Compile Core AST → Bytecode
+2. **Evaluate** - Interpreter handles Agent constructs directly:
+   - `while` → evaluated as conditional loop (re-evaluates condition each iteration)
+   - `loop` → evaluated as infinite loop
+   - `break` → raises Break exception caught by enclosing loop
+   - `continue` → raises Continue exception caught by enclosing loop
+   - `if` → evaluated as conditional branch
 
-### Desugaring Implementation
+There is no separate desugaring or compilation step — the interpreter walks the AST directly.
 
-Location: `compiler/c/src/desugar.c`
+### Interpreter Implementation
 
-Key functions:
-- `desugar_module()` - Entry point
-- `desugar_while()` - While loop transformation
-- `desugar_loop()` - Infinite loop transformation
-- `desugar_break()` - Break statement transformation
-- `desugar_continue()` - Continue statement transformation
+Location: `interpreter/interpreter.ml`
+
+The interpreter evaluates Agent constructs in `eval_block` and `eval`:
+- `while` expressions re-evaluate their condition each iteration
+- `loop` expressions run forever until `break` is raised
+- `break`/`continue` use OCaml exceptions to unwind to the enclosing loop
+- `if` expressions evaluate the condition and execute the then-branch if true
 
 ### Loop Context Tracking
 
-The desugarer maintains a loop context stack to track:
-- `start_label` - Label to jump to for continue
-- `end_label` - Label to jump to for break
-- `parent` - Enclosing loop (for nested loops)
-
-This ensures `break` and `continue` jump to the correct loop.
+The interpreter maintains loop context via OCaml exception handling:
+- `Break` exception — caught by the enclosing `while` or `loop`
+- `Continue` exception — caught by the enclosing `while` or `loop`
+- Nested loops work correctly because each loop handler catches exceptions from its own body only
 
 ## Nesting Rules
 
@@ -186,7 +184,7 @@ This ensures `break` and `continue` jump to the correct loop.
 
 ### ❌ DON'T write Core IR directly
 ```lisp
-; Don't do this - let desugarer handle it
+; Don't do this - let interpreter handle it
 (fn factorial ((n int)) -> int
   (set result int 1)
   (set i int 1)
@@ -207,7 +205,7 @@ Agent code uses **short names** for operations:
 (call mul x 2)      ; Instead of mul
 ```
 
-The compiler resolves these to typed operations based on argument types.
+The interpreter resolves these to typed operations based on argument types.
 
 See AISL-CORE.md for full list of polymorphic operations.
 
@@ -305,13 +303,13 @@ All future extensions will desugar to Core - Core remains frozen.
 
 ## Implementation Status
 
-| Construct | Status | File |
-|-----------|--------|------|
-| `while` | ✅ Implemented | desugar.c:104-171 |
-| `loop` | ✅ Implemented | desugar.c:173-217 |
-| `break` | ✅ Implemented | desugar.c:219-226 |
-| `continue` | ✅ Implemented | desugar.c:228-235 |
-| `if/else` | ⚠️ Partial | Needs expression form |
+| Construct | Status | Location |
+|-----------|--------|----------|
+| `while` | ✅ Implemented | interpreter.ml — eval/eval_block |
+| `loop` | ✅ Implemented | interpreter.ml — eval/eval_block |
+| `break` | ✅ Implemented | interpreter.ml — Break exception |
+| `continue` | ✅ Implemented | interpreter.ml — Continue exception |
+| `if/else` | ⚠️ Partial | if-then works; else not yet supported |
 
 ## Version History
 

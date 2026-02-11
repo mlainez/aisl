@@ -9,9 +9,9 @@ AISL-Core is the **frozen intermediate representation** of the AISL language. It
 - **Minimal**: Only 6 statement types
 - **Stable**: Will not change once frozen
 - **Complete**: Can express any computation
-- **Low-level**: Direct mapping to bytecode
+- **Low-level**: Direct mapping to interpreter evaluation
 
-AISL-Core is NOT meant for humans to write directly. It is the compilation target for AISL-Agent.
+AISL-Core is NOT meant for humans to write directly. It is the target for AISL-Agent, which the interpreter handles directly.
 
 ## Core Statements (FROZEN)
 
@@ -108,10 +108,8 @@ Example:
 ## Types
 
 Core supports these primitive types:
-- `int` - 32-bit signed integer
-- `int` - 64-bit signed integer  
-- `float` - 32-bit float
-- `float` - 64-bit float
+- `int` - 64-bit signed integer
+- `float` - 64-bit floating point
 - `bool` - Boolean
 - `string` - String (heap-allocated)
 - `unit` - Unit type (void)
@@ -138,7 +136,7 @@ Built-in operations use **short names** that resolve based on argument types:
 | `min` | `min_int`, `min_float`, `min_decimal`, `min` |
 | `max` | `max_int`, `max_float`, `max_decimal`, `max` |
 
-The compiler infers the correct typed operation from argument types at compile time.
+The interpreter infers the correct typed operation from argument types at runtime.
 
 ## Function Definitions
 
@@ -223,9 +221,14 @@ See AISL-AGENT.md for Agent layer specification.
 
 ## Implementation
 
-- **Compiler**: `compiler/c/src/compiler.c`
-- **Desugarer**: `compiler/c/src/desugar.c` (Agent → Core)
-- **Bytecode**: `compiler/c/include/bytecode.h`
+- **Interpreter**: `interpreter/interpreter.ml` — Tree-walking interpreter (~1640 lines)
+- **Parser**: `interpreter/parser.ml` — Recursive descent S-expression parser
+- **Lexer**: `interpreter/lexer.ml` — Tokenizer
+- **AST**: `interpreter/ast.ml` — AST node types
+- **Types**: `interpreter/types.ml` — Type kind definitions
+- **Entry Point**: `interpreter/vm.ml` — Reads file, tokenizes, parses, executes
+
+The interpreter handles Agent constructs (while, loop, break, continue, if) directly during evaluation — there is no separate desugaring pass or bytecode compilation step.
 
 ## Version History
 

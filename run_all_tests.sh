@@ -1,8 +1,10 @@
 #!/bin/bash
 # Test runner for AISL
-# Compiles and checks all test files
+# Runs all test files through the OCaml interpreter
 
 cd /var/home/marc/Projects/aisl
+
+eval $(opam env)
 
 PASSED=0
 FAILED=0
@@ -13,10 +15,9 @@ echo ""
 
 for test_file in tests/test_*.aisl; do
     test_name=$(basename "$test_file" .aisl)
-    output_file="/tmp/${test_name}.aislc"
     
-    # Compile the test
-    if ./compiler/c/bin/aislc "$test_file" "$output_file" > /dev/null 2>&1; then
+    # Run the test through the interpreter
+    if timeout 5 ./interpreter/_build/default/vm.exe "$test_file" > /dev/null 2>&1; then
         echo "✓ $test_name"
         ((PASSED++))
     else

@@ -11,11 +11,8 @@ Complete web-based TODO application with SQLite database backend, built in pure 
 ## Quick Start
 
 ```bash
-# Compile
-./compiler/c/bin/aislc examples/todo_app/todo_app.aisl /tmp/todo.aislc
-
 # Run
-./compiler/c/bin/aisl-run /tmp/todo.aislc
+./interpreter/_build/default/vm.exe examples/todo_app/todo_app.aisl
 
 # Open browser
 http://localhost:8080

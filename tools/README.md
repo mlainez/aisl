@@ -8,11 +8,7 @@ Simple informational tool about the test suite.
 
 **Usage:**
 ```bash
-# Compile
-./compiler/c/bin/aislc tools/test_runner.aisl /tmp/test_runner.aislc
-
-# Run
-./compiler/c/bin/aisl-run /tmp/test_runner.aislc
+./interpreter/_build/default/vm.exe tools/test_runner.aisl
 ```
 
 **Output:**
@@ -24,21 +20,18 @@ sample tests passed
 0
 failed
 
-Note: Run manual compilation test with:
-  for f in tests/test_*.aisl; do ./compiler/c/bin/aislc $f /tmp/test.aislc && echo PASS || echo FAIL; done
+Note: Run all tests with:
+  total=0; passed=0; for f in tests/test_*.aisl; do total=$((total+1)); timeout 5 ./interpreter/_build/default/vm.exe "$f" >/dev/null 2>&1 && passed=$((passed+1)); done; echo "$passed/$total"
 ```
 
 **Current Status:**
-- Total tests: 126
-- All tests compile successfully
+- Total tests: 119
+- All tests pass
 - All use test-spec format
 
 **To run all tests manually:**
 ```bash
-cd tests
-for f in test_*.aisl; do
-  ../compiler/c/bin/aislc "$f" "/tmp/${f%.aisl}.aislc" && echo "✓ $f" || echo "✗ $f"
-done
+total=0; passed=0; for f in tests/test_*.aisl; do total=$((total+1)); timeout 5 ./interpreter/_build/default/vm.exe "$f" >/dev/null 2>&1 && passed=$((passed+1)); done; echo "$passed/$total"
 ```
 
 ---

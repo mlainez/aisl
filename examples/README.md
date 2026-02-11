@@ -33,29 +33,24 @@ Practical examples demonstrating AISL capabilities.
 
 ## Running Examples
 
-Compile and run any example:
+Run any example directly:
 
 ```bash
-# Compile
-./compiler/c/bin/aislc examples/hello_world.aisl /tmp/hello.aislc
-
-# Run
-./compiler/c/bin/aisl-run /tmp/hello.aislc
+./interpreter/_build/default/vm.exe examples/hello_world.aisl
 ```
 
 For web servers:
 
 ```bash
-# Compile and run
-./compiler/c/bin/aislc examples/sinatra.aisl /tmp/server.aislc
-./compiler/c/bin/aisl-run /tmp/server.aislc &
+# Run server
+./interpreter/_build/default/vm.exe examples/sinatra.aisl &
 
 # Test
 curl http://localhost:8080/hello
 curl http://localhost:8080/hello.json
 
 # Stop
-pkill aisl-run
+kill %1
 ```
 
 ## Contributing Examples

@@ -13,16 +13,16 @@ Why:
 
 Process when you need a script:
 1. Check stdlib/ and modules/ for available modules (string_utils, json_utils, conversion, etc.)
-2. If missing, ADD IT TO AISL (extend VM, runtime, compiler)
+2. If missing, ADD IT TO AISL (extend interpreter runtime)
 3. Write the script in pure AISL
 4. If you wrote Python/Bash, DELETE IT and rewrite in AISL
 
 Examples of what should be AISL:
-- convert_syntax.aisl ✓ (converts test syntax)
-- test runners ✓ (already in AISL)
-- build scripts → TODO: rewrite in AISL
-- code generators → TODO: write in AISL
-- documentation generators → TODO: write in AISL
+- convert_syntax.aisl (converts test syntax)
+- test runners (already in AISL)
+- build scripts -> TODO: rewrite in AISL
+- code generators -> TODO: write in AISL
+- documentation generators -> TODO: write in AISL
 
 **If you catch yourself writing Python, STOP and use AISL instead**
 
@@ -32,17 +32,17 @@ Examples of what should be AISL:
 
 Available modules:
 
-stdlib/ (pure AISL implementations):
+stdlib/ (14 pure AISL implementations):
 - core/: string_utils, conversion, channel
 - data/: json_utils, base64
 - net/: http, websocket
 - pattern/: regex
 - crypto/: hash
-- sys/: time, process, sleep
+- sys/: time, process, sleep, ffi
 - db/: sqlite
 
 modules/ (additional modules):
-- array_utils, unit_conversion, array_utils, math, http, json_utils, network, filesystem, validation
+- array_utils, unit_conversion, math, math_extended, math_simple, http, json_utils, network, filesystem, validation, text_utils
 
 Process:
 1. List stdlib/ AND modules/ directories to see available modules
@@ -63,7 +63,7 @@ Example:
 **ALWAYS CONSULT AND UPDATE MACHINE-READABLE FORMATS FIRST**
 
 When working on AISL, the order of consultation is:
-1. FIRST: .aisl.grammar (syntax reference, 42 lines, ~400 tokens)
+1. FIRST: .aisl.grammar (syntax reference, ~90 lines, ~800 tokens)
 2. SECOND: .aisl.meta (project context, compressed s-expr)
 3. THIRD: .aisl.analysis (design decisions, this file)
 4. LAST: AGENTS.md and other markdown (human docs, 8000+ tokens)
@@ -133,7 +133,7 @@ Process:
 
 Process:
 1. When writing AISL code, if you hit a bug or limitation
-2. FIX IT immediately in the language/compiler/VM
+2. FIX IT immediately in the interpreter
 3. Don't work around it - fix the root cause
 4. Update documentation with the fix
 5. Add test case for the bug
@@ -145,9 +145,9 @@ This directive ensures:
 - Real usage drives development
 
 Examples:
-- Found: type keywords as var names cause crashes → FIX: add parser check
-- Found: parser rejects valid syntax → FIX: update parser rules
-- Found: missing stdlib function → FIX: add to VM runtime
+- Found: type keywords as var names cause crashes -> FIX: add parser check
+- Found: parser rejects valid syntax -> FIX: update parser rules
+- Found: missing stdlib function -> FIX: add to interpreter runtime
 
 **NEVER leave bugs unfixed** - they compound over time
 
@@ -300,3 +300,24 @@ Module named with type keyword causes: "Module '' not found" error
 ```
 
 Missing closing ) causes confusing "Module '' not found" error
+
+@(interpreter-architecture)
+
+**OCaml tree-walking interpreter - no bytecode, no compilation step**
+
+Implementation: interpreter/ directory (OCaml 5.2.1, dune build system)
+
+Components:
+- lexer.ml - Tokenizes S-expressions
+- parser.ml - Recursive descent parser, produces AST
+- types.ml - Type kind definitions
+- ast.ml - AST node types
+- interpreter.ml - ~1640 lines: eval, eval_call (all builtins), eval_block, test framework, import system, WebSocket helpers
+- vm.ml - Entry point: reads file, tokenizes, parses, executes
+
+Build: cd interpreter && eval $(opam env) && dune build
+Run: ./interpreter/_build/default/vm.exe program.aisl
+
+Libraries: unix, str, ssl (OpenSSL bindings)
+
+No separate desugaring pass - interpreter handles Agent constructs (while, loop, if, break, continue) directly in eval_block.

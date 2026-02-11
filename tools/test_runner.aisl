@@ -12,7 +12,7 @@
     (print failed)
     (print "failed")
     (print "")
-    (print "Note: Run manual compilation test with:")
-    (print "  for f in tests/test_*.aisl; do ./compiler/c/bin/aislc $f /tmp/test.aislc && echo PASS || echo FAIL; done")
+    (print "Note: Run all tests with:")
+    (print "  for f in tests/test_*.aisl; do ./interpreter/_build/default/vm.exe $f && echo PASS || echo FAIL; done")
     
     (ret 0)))

@@ -4,7 +4,7 @@ Test files for AISL language features and standard library.
 
 ## Test Status
 
-**126 tests - All use test-spec format**
+**119 tests - All passing, all use test-spec format**
 
 ## Test Categories
 
@@ -36,22 +36,13 @@ Test files for AISL language features and standard library.
 Individual test:
 
 ```bash
-./compiler/c/bin/aislc tests/test_add.aisl /tmp/test.aislc
-./compiler/c/bin/aisl-run /tmp/test.aislc
+./interpreter/_build/default/vm.exe tests/test_add.aisl
 ```
 
 All tests:
 
 ```bash
-cd tests
-for f in test_*.aisl; do
-  ../compiler/c/bin/aislc "$f" "/tmp/${f%.aisl}.aislc" > /dev/null 2>&1
-  if [ $? -eq 0 ]; then
-    echo "✓ $f"
-  else
-    echo "✗ $f"
-  fi
-done
+total=0; passed=0; for f in tests/test_*.aisl; do total=$((total+1)); timeout 5 ./interpreter/_build/default/vm.exe "$f" >/dev/null 2>&1 && passed=$((passed+1)); done; echo "$passed/$total"
 ```
 
 ## Test Format

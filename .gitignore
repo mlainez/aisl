@@ -1,15 +1,11 @@
-# AISL Compiled Bytecode
+# OCaml build artifacts
+interpreter/_build/
+
+# AISL bytecode (legacy)
 *.aislc
 
-# Compiler Binaries
-compiler/c/bin/aislc
-compiler/c/bin/aisl-run
-compiler/c/bin/
-
-# C Object Files
-compiler/c/src/*.o
-compiler/c/*.o
+# C object files (legacy)
 *.o
 
-# local databases
+# local databases
 *.db

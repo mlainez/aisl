@@ -7,7 +7,7 @@ AISL (AI-Optimized Systems Language) - A two-layer programming language designed
 AISL consists of two distinct layers:
 
 ### AISL-Core (IR Layer)
-The minimal, stable intermediate representation that the VM executes. This layer is **frozen** - it will never change. Core consists of only 6 statement types:
+The minimal, stable intermediate representation. This layer is **frozen** - it will never change. Core consists of only 6 statement types:
 - `set` - Variable binding
 - `call` - Function calls
 - `label` - Jump targets
@@ -16,9 +16,9 @@ The minimal, stable intermediate representation that the VM executes. This layer
 - `ret` - Return from function
 
 ### AISL-Agent (Surface Layer)
-The ergonomic surface language that LLMs generate. Agent code includes structured control flow (`while`, `loop`, `break`, `continue`) and type-directed operations (`add` instead of `add`). The compiler desugars Agent code to Core IR before execution.
+The ergonomic surface language that LLMs generate. Agent code includes structured control flow (`while`, `loop`, `break`, `continue`) and type-directed operations (`add` instead of `add`). The interpreter handles Agent code directly — no separate compilation step.
 
-**LLMs write Agent code. The VM runs Core code.**
+**LLMs write Agent code. The interpreter runs it directly.**
 
 ---
 
@@ -77,9 +77,7 @@ Test files using the `test-spec` framework don't require a `main` function.
 ## Types
 
 ### Primitive Types
-- **int** - 32-bit signed integer
 - **int** - 64-bit signed integer
-- **float** - 32-bit floating point
 - **float** - 64-bit floating point
 - **bool** - Boolean (true/false)
 - **string** - UTF-8 string
@@ -310,7 +308,7 @@ See `stdlib/README.md` for complete documentation of all stdlib modules.
 
 ### Type-Directed Operations
 
-The compiler infers types automatically. Write operation names without type suffixes:
+The interpreter infers types automatically. Write operation names without type suffixes:
 
 ```scheme
 ; Arithmetic (works for int, int, float, float)
@@ -337,7 +335,7 @@ The compiler infers types automatically. Write operation names without type suff
 (call pow base exp); Power (float, float only)
 ```
 
-The compiler automatically selects the correct operation based on variable types:
+The interpreter automatically selects the correct operation based on variable types:
 ```scheme
 (set x int 10)
 (set y int 20)
@@ -690,9 +688,9 @@ This server demonstrates:
 
 1. **Two-Layer Architecture** - Core IR is frozen; Agent layer adds ergonomics
 2. **Explicit Types** - Every variable has declared type
-3. **Type-Directed Dispatch** - Compiler infers operation types automatically
+3. **Type-Directed Dispatch** - Interpreter infers operation types automatically
 4. **Flat Structure** - No complex nested expressions
-5. **Structured Control** - `while`/`loop` desugar to labels/goto
+5. **Structured Control** - `while`/`loop` handled directly by interpreter
 6. **Explicit Error Handling** - Result type for fallible operations
 7. **Function Calls** - All operations use explicit `call` syntax
 8. **No Operator Precedence** - Everything is a function call
@@ -701,17 +699,11 @@ This server demonstrates:
 
 ---
 
-## Compilation and Execution
+## Execution
 
 ```bash
-# Compile AISL-Agent source to bytecode (via Core IR)
-./compiler/c/bin/aislc program.aisl program.aislc
-
-# Run bytecode
-./compiler/c/bin/aisl-run program.aislc
-
-# View desugared Core IR (for debugging)
-./compiler/c/bin/aislc --emit-core program.aisl
+# Run AISL program directly (single-step: parse and execute)
+./interpreter/_build/default/vm.exe program.aisl
 ```
 
 ## Test Framework
@@ -764,5 +756,4 @@ Every test file must include:
 
 ## File Extensions
 
-- `.aisl` - AISL-Agent source files
-- `.aislc` - Compiled bytecode (Core IR)
+- `.aisl` - AISL source files

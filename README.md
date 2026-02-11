@@ -14,39 +14,39 @@ AISL (AI-Optimized Systems Language) is a modern systems programming language sp
 - Hundreds of type-specific operations to memorize
 
 **AISL fixes this:**
-- ✅ **Zero operator precedence** - all operations are explicit function calls
-- ✅ **Zero implicit conversions** - types are always explicit
-- ✅ **One canonical form** - only ONE way to do everything
-- ✅ **Flat control flow** - structured constructs desugar to simple jumps
-- ✅ **Type-directed dispatch** - write `add`, compiler infers `add_int` vs `add_float`
-- ✅ **S-expression syntax** - trivial to parse and generate
+- **Zero operator precedence** - all operations are explicit function calls
+- **Zero implicit conversions** - types are always explicit
+- **One canonical form** - only ONE way to do everything
+- **Flat control flow** - structured constructs with simple semantics
+- **Type-directed dispatch** - write `add`, interpreter infers `add_int` vs `add_float`
+- **S-expression syntax** - trivial to parse and generate
 
 ## Architecture: The Two-Layer Innovation
 
 AISL's killer feature is its **two-layer architecture** that prevents language entropy over time:
 
 ```
-┌─────────────────────────────────────────┐
-│         AISL-Agent (Surface)            │
-│  What LLMs Write: while, loop, break    │
-│  Ergonomic, can evolve over time        │
-└───────────────┬─────────────────────────┘
-                │ Automatic Desugaring
-                ▼
-┌─────────────────────────────────────────┐
-│          AISL-Core (IR)                 │
-│  What VM Runs: set, call, goto, label   │
-│  Minimal, frozen forever (6 statements) │
-└─────────────────────────────────────────┘
++---------------------------------------------+
+|         AISL-Agent (Surface)                |
+|  What LLMs Write: while, loop, break       |
+|  Ergonomic, can evolve over time            |
++---------------------+-----------------------+
+                      |
+                      v
++---------------------------------------------+
+|          AISL-Core (IR)                     |
+|  Concepts: set, call, goto, label           |
+|  Minimal, frozen forever (6 statements)     |
++---------------------------------------------+
 ```
 
 ### Why This Matters
 
 - **LLMs write Agent code** - Natural, structured syntax they understand
-- **VM runs Core code** - Minimal, stable IR that never changes
+- **Interpreter handles both layers** - Agent constructs evaluated directly alongside Core primitives
 - **Core is frozen** - Your LLM training never becomes outdated
 - **Agent evolves** - New features can be added without breaking Core
-- **Deterministic** - Desugaring is automatic and predictable
+- **Deterministic** - Same input = same output, always
 
 **Result:** LLM-generated code has a stable target that will never change, while surface syntax can improve over time.
 
@@ -57,25 +57,24 @@ AISL's killer feature is its **two-layer architecture** that prevents language e
 ```lisp
 (module hello
   (fn main -> int
-    (call print "Hello, AISL!")
+    (print "Hello, AISL!")
     (ret 0)))
 ```
 
-### Build the Compiler
+### Build the Interpreter
 
 ```bash
-cd compiler/c
-make
+# Prerequisites: OCaml 5.2.1, opam, dune, openssl-dev
+cd interpreter
+eval $(opam env)
+dune build
 ```
 
-### Compile and Run
+### Run
 
 ```bash
-# Compile AISL source to bytecode
-./compiler/c/bin/aislc hello.aisl hello.aislc
-
-# Execute bytecode
-./compiler/c/bin/aisl-run hello.aislc
+# Run AISL source directly (single step, no compilation)
+./interpreter/_build/default/vm.exe hello.aisl
 ```
 
 ## Language Philosophy
@@ -88,7 +87,7 @@ These design decisions were made during collaborative AI-human development to ma
 
 2. **Explicit Everything** - Types, conversions, control flow, error handling - nothing is implicit. What you see is what you get.
 
-3. **Type-Directed Dispatch** - LLMs write `(call add x y)`, compiler infers whether to use `add_int` or `add_float` based on `x`'s type. Reduces cognitive load.
+3. **Type-Directed Dispatch** - LLMs write `(add x y)`, interpreter infers whether to use `add_int` or `add_float` based on `x`'s type. Reduces cognitive load.
 
 4. **Flat Structure** - Sequential statements with simple jumps. No deeply nested expressions that require tracking complex state.
 
@@ -108,19 +107,19 @@ These design decisions were made during collaborative AI-human development to ma
 
 ### What AISL is FOR
 
-✅ **AI Code Generation** - Primary design goal
-✅ **Web Services** - HTTP servers, REST APIs, WebSocket servers
-✅ **CLI Tools** - System utilities, automation scripts
-✅ **Network Services** - TCP servers, protocol implementations
-✅ **Data Processing** - JSON/CSV parsing, transformations
-✅ **System Integration** - Process spawning, IPC, database clients
+- **AI Code Generation** - Primary design goal
+- **Web Services** - HTTP servers, REST APIs, WebSocket servers
+- **CLI Tools** - System utilities, automation scripts
+- **Network Services** - TCP servers, TLS, WebSocket protocol implementations
+- **Data Processing** - JSON/CSV parsing, transformations
+- **System Integration** - Process spawning, IPC, database clients
 
 ### What AISL is NOT FOR
 
-❌ **Real-time Systems** - Bytecode interpreter overhead
-❌ **Low-level System Programming** - No manual memory management, no pointers
-❌ **GUI Applications** - No GUI framework (yet)
-❌ **Performance-Critical Inner Loops** - Compile to C/Rust for hot paths
+- **Real-time Systems** - Tree-walking interpreter overhead
+- **Low-level System Programming** - No manual memory management, no pointers
+- **GUI Applications** - No GUI framework (yet)
+- **Performance-Critical Inner Loops** - Compile to C/Rust for hot paths
 
 ## Core Features
 
@@ -129,33 +128,35 @@ These design decisions were made during collaborative AI-human development to ma
 ```lisp
 int      ; 64-bit signed integer (ONLY int type)
 float    ; 64-bit floating point (ONLY float type)
+decimal  ; Arbitrary precision decimal (financial math)
 bool     ; Boolean (true/false)
 string   ; UTF-8 string
 array    ; Dynamic array
 map      ; Hash map
 json     ; JSON values
 regex    ; Compiled regular expression
+socket   ; TCP socket handle
+process  ; Process handle (for DB, subprocesses)
 ```
 
-**AI Decision:** Only TWO numeric types (`int`, `float`) - not i8/i16/i32/i64/u8/u16/u32/u64. Less for LLMs to remember, still covers 99% of use cases.
+**AI Decision:** Only TWO numeric types (`int`, `float`) plus `decimal` for financial precision - not i8/i16/i32/i64/u8/u16/u32/u64. Less for LLMs to remember, still covers 99% of use cases.
 
 ### Control Flow (Agent Layer)
 
 ```lisp
-; Structured constructs (what LLMs write)
 (while condition statements...)   ; While loop
 (loop statements...)              ; Infinite loop
 (if condition statements...)      ; Conditional
 (break)                           ; Exit loop
 (continue)                        ; Next iteration
 
-; Core constructs (what VM executes)
+; Core constructs (available for complex control flow)
 (label name)                      ; Jump target
 (goto target)                     ; Unconditional jump
-(ifnot bool_var target)          ; Jump if false
+(ifnot bool_var target)           ; Jump if false
 ```
 
-**AI Decision:** Structured constructs desugar to Core primitives. LLMs write ergonomic code, VM runs simple jumps. Best of both worlds.
+**AI Decision:** Structured constructs are evaluated directly by the interpreter. LLMs write ergonomic code, interpreter handles semantics.
 
 ### Type-Directed Dispatch (LLM Superpower)
 
@@ -163,38 +164,39 @@ regex    ; Compiled regular expression
 ; LLM writes this (generic)
 (set x int 10)
 (set y int 20)
-(set sum int (call add x y))    ; Compiler infers add_int
+(set sum int (add x y))    ; Interpreter infers add_int
 
 (set a float 3.14)
 (set b float 2.71)
-(set total float (call add a b)) ; Compiler infers add_float
+(set total float (add a b)) ; Interpreter infers add_float
 ```
 
-**AI Decision:** LLMs don't need to remember `add_int`, `add_i64`, `add_f32`, `add_f64` - just write `add` and the compiler figures it out.
+**AI Decision:** LLMs don't need to remember `add_int`, `add_i64`, `add_f32`, `add_f64` - just write `add` and the interpreter figures it out.
 
 ### Error Handling
 
 ```lisp
 (fn safe_divide a int b int -> int
-  (if (call eq b 0)
+  (if (eq b 0)
     (panic "Division by zero"))
-  (ret (call div a b)))
+  (ret (div a b)))
 
 (fn main -> int
-  (set value int (call safe_divide 10 0))
-  (call print value)
+  (set value int (safe_divide 10 0))
+  (print value)
   (ret 0))
 ```
 
 **AI Decision:** Operations panic on error with clear messages. LLM regenerates with checks (file_exists, etc.) when panics occur.
 
-## Standard Library (13 Modules in Pure AISL)
+## Standard Library (14 Modules in Pure AISL)
 
-All stdlib modules are implemented **in pure AISL**, not C. This enforces our philosophy: "If it CAN be written in AISL, it MUST be written in AISL."
+All stdlib modules are implemented **in pure AISL**, not native code. This enforces our philosophy: "If it CAN be written in AISL, it MUST be written in AISL."
 
-### Core (2 modules)
+### Core (3 modules)
 - **string_utils** - String operations (`split`, `trim`, `contains`, `replace`, `starts_with`, `ends_with`)
 - **conversion** - Type conversion (`string_from_int`, `bool_to_int`, `kilometers_to_miles`)
+- **channel** - Channel operations
 
 ### Data (2 modules)
 - **json_utils** - JSON parsing and generation
@@ -210,14 +212,16 @@ All stdlib modules are implemented **in pure AISL**, not C. This enforces our ph
 ### Crypto (1 module)
 - **hash** - Cryptographic hashing (SHA256, MD5)
 
-### System (2 modules)
+### System (4 modules)
 - **time** - Time operations
 - **process** - Process management
+- **sleep** - Sleep/delay
+- **ffi** - Foreign function interface
 
 ### Database (1 module)
 - **sqlite** - SQLite database (via process spawning)
 
-**Plus 180+ built-in operations** for arithmetic, comparisons, I/O, TCP networking, file system, arrays, maps.
+**Plus 180+ built-in operations** for arithmetic, comparisons, I/O, TCP/TLS networking, WebSocket protocol, file system, arrays, maps, and more.
 
 ## Examples
 
@@ -226,15 +230,15 @@ All stdlib modules are implemented **in pure AISL**, not C. This enforces our ph
 ```lisp
 (module factorial
   (fn factorial n int -> int
-    (if (call eq n 0)
+    (if (eq n 0)
       (ret 1))
-    (set n_minus_1 int (call sub n 1))
-    (set prev int (call factorial n_minus_1))
-    (ret (call mul n prev)))
+    (set n_minus_1 int (sub n 1))
+    (set prev int (factorial n_minus_1))
+    (ret (mul n prev)))
 
   (fn main -> int
-    (set result int (call factorial 5))
-    (call print result)  ; Prints: 120
+    (set result int (factorial 5))
+    (print result)  ; Prints: 120
     (ret 0)))
 ```
 
@@ -243,31 +247,31 @@ All stdlib modules are implemented **in pure AISL**, not C. This enforces our ph
 ```lisp
 (module web_server
   (fn handle_request client_sock string -> int
-    (set request string (call tcp_receive client_sock 4096))
+    (set request string (tcp_receive client_sock 4096))
     (set response string "HTTP/1.1 200 OK\r\n\r\nHello from AISL!")
-    (call tcp_send client_sock response)
-    (call tcp_close client_sock)
+    (tcp_send client_sock response)
+    (tcp_close client_sock)
     (ret 0))
 
   (fn main -> int
-    (set server_sock string (call tcp_listen 8080))
-    (call print "Server listening on port 8080")
+    (set server_sock string (tcp_listen 8080))
+    (print "Server listening on port 8080")
     (loop
-      (set client_sock string (call tcp_accept server_sock))
-      (call handle_request client_sock))
+      (set client_sock string (tcp_accept server_sock))
+      (handle_request client_sock))
     (ret 0)))
 ```
 
-See [examples/](examples/) for 17 complete working examples.
+See [examples/](examples/) for 22 complete working examples including a real-time WebSocket chat app and a TODO app with SQLite.
 
 ## Testing
 
-AISL has **126 passing tests** covering all language features. All tests use the `test-spec` structure:
+AISL has **119 passing tests** covering all language features. All tests use the `test-spec` structure:
 
 ```lisp
 (module test_addition
   (fn add_numbers a int b int -> int
-    (ret (call add a b)))
+    (ret (add a b)))
 
   (test-spec add_numbers
     (case "adds positive numbers"
@@ -286,73 +290,64 @@ AISL has **126 passing tests** covering all language features. All tests use the
 
 ```
 aisl/
-├── README.md                   # This file
-├── AGENTS.md                   # LLM quick reference (8K tokens)
-├── LANGUAGE_SPEC.md            # Complete language specification
-├── AISL-CORE.md                # Core IR specification (frozen forever)
-├── AISL-AGENT.md               # Agent surface language
-├── .aisl.grammar               # Machine-readable grammar (400 tokens, 20x more efficient!)
-├── .aisl.meta                  # Project context (compressed s-expr)
-├── .aisl.analysis              # Deep architectural analysis
-│
-├── compiler/c/                 # C compiler and VM
-│   ├── src/                    # Compiler implementation
-│   │   ├── compiler.c          # Agent → Core desugaring + bytecode generation
-│   │   ├── parser.c            # S-expression parser
-│   │   ├── lexer.c             # Tokenizer
-│   │   ├── desugar.c           # Agent → Core transformation
-│   │   ├── vm.c                # Bytecode interpreter
-│   │   ├── runtime.c           # Built-in functions (180+)
-│   │   ├── module_loader.c     # Module import system
-│   │   └── test_framework.c    # Test runner
-│   ├── include/                # Header files
-│   │   ├── bytecode.h          # Bytecode opcodes
-│   │   ├── ast.h               # AST definitions
-│   │   └── ...
-│   ├── bin/
-│   │   ├── aislc               # Compiler binary
-│   │   └── aisl-run            # VM binary
-│   └── Makefile
-│
-├── stdlib/                     # Standard library (pure AISL!)
-│   ├── core/                   # Core modules (result, string_utils, conversion)
-│   ├── data/                   # Data formats (json_utils, base64)
-│   ├── net/                    # Networking (http, websocket)
-│   ├── pattern/                # Pattern matching (regex)
-│   ├── crypto/                 # Cryptography (hash)
-│   ├── sys/                    # System (time, process)
-│   ├── db/                     # Databases (sqlite)
-│   └── README.md               # Stdlib documentation
-│
-├── tests/                      # Test suite (126 tests, all passing)
-│   ├── test_*.aisl             # Unit tests
-│   └── README.md
-│
-├── examples/                   # Example programs (17 examples)
-│   ├── hello_world.aisl
-│   ├── sinatra_demo.aisl       # Web server with routing
-│   ├── working_server.aisl     # Production-ready HTTP server
-│   ├── echo_server.aisl        # TCP echo server
-│   └── ...
-│
-├── tools/                      # Utilities (written in pure AISL!)
-│   ├── fix_tests.aisl          # Test file converter
-│   └── test_runner.aisl        # Test harness
-│
-└── modules/                    # Legacy modules (being migrated to stdlib/)
++-- README.md                   # This file
++-- AGENTS.md                   # LLM quick reference (8K tokens)
++-- LANGUAGE_SPEC.md            # Complete language specification
++-- AISL-CORE.md                # Core IR specification (frozen forever)
++-- AISL-AGENT.md               # Agent surface language
++-- .aisl.grammar               # Machine-readable grammar (~800 tokens)
++-- .aisl.meta                  # Project context (compressed s-expr)
++-- .aisl.analysis              # Deep architectural analysis
+|
++-- interpreter/                # OCaml tree-walking interpreter
+|   +-- lexer.ml                # S-expression tokenizer
+|   +-- parser.ml               # Recursive descent parser
+|   +-- types.ml                # Type kind definitions
+|   +-- ast.ml                  # AST node types
+|   +-- interpreter.ml          # Evaluator + 180+ builtins (~1640 lines)
+|   +-- vm.ml                   # Entry point
+|   +-- dune / dune-project     # Build configuration
+|   +-- _build/                 # Build output
+|
++-- stdlib/                     # Standard library (14 modules, pure AISL!)
+|   +-- core/                   # Core modules (string_utils, conversion, channel)
+|   +-- data/                   # Data formats (json_utils, base64)
+|   +-- net/                    # Networking (http, websocket)
+|   +-- pattern/                # Pattern matching (regex)
+|   +-- crypto/                 # Cryptography (hash)
+|   +-- sys/                    # System (time, process, sleep, ffi)
+|   +-- db/                     # Databases (sqlite)
+|   +-- README.md               # Stdlib documentation
+|
++-- tests/                      # Test suite (119 tests, all passing)
+|   +-- test_*.aisl             # Unit tests
+|   +-- README.md
+|
++-- examples/                   # Example programs (22 examples)
+|   +-- hello_world.aisl
+|   +-- sinatra_demo.aisl       # Web server with routing
+|   +-- chat_app/               # Real-time WebSocket chat application
+|   +-- todo_app/               # TODO app with SQLite backend
+|   +-- ...
+|
++-- tools/                      # Utilities (written in pure AISL!)
+|   +-- fix_tests.aisl          # Test file converter
+|   +-- test_runner.aisl        # Test harness
+|
++-- modules/                    # Additional modules (12 modules)
 ```
 
 ## Documentation Hierarchy (For LLMs)
 
 **When generating AISL code, LLMs should consult in this order:**
 
-1. **`.aisl.grammar`** (400 tokens) - Complete syntax reference, CONSULT FIRST
+1. **`.aisl.grammar`** (~800 tokens) - Complete syntax reference, CONSULT FIRST
 2. **`.aisl.meta`** (compressed) - Project context
 3. **`.aisl.analysis`** (detailed) - Design decisions, known issues
 4. **`AGENTS.md`** (8K tokens) - LLM-optimized quick reference with examples
 5. **`LANGUAGE_SPEC.md`** (full) - Complete specification for deep dives
 
-**Why this order?** Token efficiency. `.aisl.grammar` is 20x more efficient than prose documentation.
+**Why this order?** Token efficiency. `.aisl.grammar` is 10x more efficient than prose documentation.
 
 ## Key Design Decisions Explained
 
@@ -390,12 +385,12 @@ aisl/
 
 ### 4. Why Type-Directed Dispatch?
 
-**Decision:** Write `(call add x y)`, not `(call add_int x y)`.
+**Decision:** Write `(add x y)`, not `(add_int x y)`.
 
 **Rationale:**
 - Reduces cognitive load for LLMs (don't memorize 50 operation variants)
-- Compiler infers types from variable declarations
-- Still fully statically typed (no runtime dispatch)
+- Interpreter infers types from variable declarations
+- Still fully statically typed (no runtime dispatch overhead)
 - Feels more natural for LLMs trained on high-level languages
 
 ### 5. Why Frozen Core IR?
@@ -405,9 +400,9 @@ aisl/
 **Rationale:**
 - LLM training data never becomes outdated
 - Agent layer can evolve without breaking Core
-- Simplifies VM implementation (fewer opcodes to optimize)
+- Simplifies interpreter implementation
 - Easier to reason about correctness
-- Future compilers/VMs can target the same IR
+- Future implementations can target the same IR
 
 ### 6. Why No `main()` in Tests?
 
@@ -421,44 +416,48 @@ aisl/
 
 ### 7. Why Pure AISL Stdlib?
 
-**Decision:** All stdlib modules must be written in pure AISL, not C.
+**Decision:** All stdlib modules must be written in pure AISL.
 
 **Rationale:**
 - Eating our own dog food - discovers language limitations immediately
 - Stdlib modules become learning examples for LLMs
-- No FFI/C dependency hellscape
+- No FFI/dependency hellscape
 - Forces AISL to be complete and self-sufficient
 - If AISL can't express something, we extend AISL
 
 ## Building from Source
 
 ```bash
-# Prerequisites: gcc, make, openssl-dev
-cd compiler/c
-make
+# Prerequisites: OCaml 5.2.1 (via opam), dune 3.21+, openssl-dev
+cd interpreter
+eval $(opam env)
+dune build
 
-# Binaries created:
-# - bin/aislc      (compiler)
-# - bin/aisl-run   (VM)
+# Binary created at:
+# interpreter/_build/default/vm.exe
 ```
 
 ## Running Tests
 
 ```bash
-# Run all 126 tests
-cd compiler/c
-for test in ../tests/test_*.aisl; do
-  ./bin/aislc "$test" "/tmp/$(basename $test).aislc" && ./bin/aisl-run "/tmp/$(basename $test).aislc"
+# Run all 119 tests
+cd interpreter
+eval $(opam env)
+total=0; passed=0
+for f in ../tests/test_*.aisl; do
+  total=$((total+1))
+  timeout 5 ./_build/default/vm.exe "$f" >/dev/null 2>&1 && passed=$((passed+1))
 done
+echo "$passed/$total"
 ```
 
 ## Performance Characteristics
 
-- **Compilation:** Single-pass, very fast (~1ms per module)
-- **Bytecode:** Compact, efficient encoding
-- **VM:** Stack-based interpreter, predictable performance
-- **No GC pauses:** Strings are ref-counted
-- **Cold start:** <1ms (no JIT warmup needed)
+- **Interpretation:** Tree-walking, direct AST evaluation - no separate compilation step
+- **Startup:** Fast (<10ms) - parse and execute in one step
+- **No GC pauses:** OCaml garbage collector handles memory
+- **Cold start:** Minimal overhead (no bytecode generation, no JIT warmup)
+- **WebSocket:** Native binary frame encoding/decoding with SHA-1 handshake
 
 **Not designed for:** Number-crunching inner loops. Use C/Rust for hot paths, AISL for glue code.
 
@@ -466,30 +465,30 @@ done
 
 AISL is currently in active development. All changes must:
 
-1. ✅ Maintain zero ambiguity (ONE WAY ONLY)
-2. ✅ Pass all 126 tests
-3. ✅ Update machine-readable docs (`.aisl.grammar`, `.aisl.meta`)
-4. ✅ Write new stdlib modules in pure AISL (no C)
-5. ✅ Follow the "frozen Core IR" principle
+1. Maintain zero ambiguity (ONE WAY ONLY)
+2. Pass all 119 tests
+3. Update machine-readable docs (`.aisl.grammar`, `.aisl.meta`)
+4. Write new stdlib modules in pure AISL
+5. Follow the "frozen Core IR" principle
 
 ## Strengths
 
-✅ **LLM-Optimized** - Designed for reliable AI code generation
-✅ **Zero Ambiguity** - Every construct has exactly one meaning
-✅ **Stable Target** - Core IR frozen forever
-✅ **Batteries Included** - 180+ built-in functions, 14 stdlib modules
-✅ **Fast Compilation** - Single-pass, <1ms per module
-✅ **Easy to Parse** - S-expression syntax
-✅ **Explicit Everything** - No surprises, no hidden behavior
-✅ **Real-World Ready** - Production HTTP servers, database clients, JSON processing
+- **LLM-Optimized** - Designed for reliable AI code generation
+- **Zero Ambiguity** - Every construct has exactly one meaning
+- **Stable Target** - Core IR frozen forever
+- **Batteries Included** - 180+ built-in operations, 14 stdlib modules
+- **Fast Startup** - Direct interpretation, <10ms
+- **Easy to Parse** - S-expression syntax
+- **Explicit Everything** - No surprises, no hidden behavior
+- **Real-World Ready** - Production HTTP/WebSocket servers, database clients, JSON processing
 
 ## Weaknesses (Known Limitations)
 
-❌ **Interpreter Overhead** - Not as fast as compiled C/Rust (not the goal)
-❌ **No SIMD** - Bytecode VM doesn't vectorize
-❌ **No Parallel Execution** - Single-threaded for now (async planned)
-❌ **Limited Ecosystem** - Young language, stdlib still growing
-❌ **No IDE Support** - LSP server planned but not implemented
+- **Interpreter Overhead** - Not as fast as compiled C/Rust (not the goal)
+- **No SIMD** - Tree-walking interpreter doesn't vectorize
+- **No Parallel Execution** - Single-threaded for now (async planned)
+- **Limited Ecosystem** - Young language, stdlib still growing
+- **No IDE Support** - LSP server planned but not implemented
 
 ## Roadmap
 
@@ -500,10 +499,10 @@ AISL is currently in active development. All changes must:
 - [ ] Package manager
 
 ### Long Term
-- [ ] JIT compiler for hot paths
+- [ ] Bytecode compiler for performance
 - [ ] WebAssembly target
 - [ ] Parallel execution model
-- [ ] Native compilation (AISL → C)
+- [ ] Native compilation (AISL -> C)
 
 ---
 
@@ -511,10 +510,10 @@ AISL is currently in active development. All changes must:
 
 **AISL** = **A**I-Optimized **S**ystems **L**anguage
 
-Also: "AISL" sounds like "aisle" - a clear path forward for AI code generation. 🛤️
+Also: "AISL" sounds like "aisle" - a clear path forward for AI code generation.
 
 ---
 
-**AISL - Designed by AI, for AI. Built for Everyone.** 🤖
+**AISL - Designed by AI, for AI. Built for Everyone.**
 
 *Created through collaborative AI-human design to solve the hard problem: making LLMs generate correct code, reliably.*

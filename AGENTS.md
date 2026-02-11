@@ -166,7 +166,7 @@ AISL (AI-Optimized Systems Language) is a programming language specifically desi
 - No implicit conversions - types are always explicit
 - One canonical form for each construct
 - Flat, sequential control flow with simple desugaring
-- Type-directed dispatch - write `add`, compiler infers `add` vs `add`
+- Type-directed dispatch - write `add`, interpreter infers the correct typed operation
 
 ---
 
@@ -180,11 +180,11 @@ AISL uses a **two-layer design** that prevents entropy over time:
 │  What LLMs Write: while, loop, break    │
 │  Ergonomic, evolves over time           │
 └───────────────┬─────────────────────────┘
-                │ Desugaring
+                │ Interpretation
                 ▼
 ┌─────────────────────────────────────────┐
 │          AISL-Core (IR)                 │
-│  What VM Runs: set, call, goto, label   │
+│  What Runs: set, call, goto, label      │
 │  Minimal, frozen forever                │
 └─────────────────────────────────────────┘
 ```
@@ -192,8 +192,8 @@ AISL uses a **two-layer design** that prevents entropy over time:
 ### Why This Matters
 
 - **LLMs write Agent code** - Natural, structured syntax they understand
-- **VM runs Core code** - Minimal, stable IR that never changes
-- **Desugaring is automatic** - Compiler handles the transformation
+- **Interpreter runs Core code** - Minimal, stable IR that never changes
+- **Desugaring is automatic** - Interpreter handles Agent constructs directly
 - **Core is frozen** - No breaking changes, ever
 - **Agent can evolve** - Add new constructs without touching Core
 
@@ -253,7 +253,7 @@ You rarely write these directly - they're what Agent code desugars to:
 
 ### Agent Constructs (What You Should Generate)
 
-Generate these - the compiler desugars them to Core:
+Generate these - the interpreter handles them directly:
 
 ```lisp
 ; If statement - conditional execution
@@ -287,10 +287,8 @@ Generate these - the compiler desugars them to Core:
 
 | Type | Description | Example |
 |------|-------------|---------|
-| `int` | 32-bit signed integer | `42` |
-| `int` | 64-bit signed integer | `9223372036854775807` |
-| `float` | 32-bit float | `3.14` |
-| `float` | 64-bit float | `2.718281828` |
+| `int` | 64-bit signed integer | `42` |
+| `float` | 64-bit floating point | `3.14` |
 | `decimal` | Arbitrary precision decimal | `19.99`, `0.1` |
 | `bool` | Boolean | `true`, `false` |
 | `string` | UTF-8 string | `"hello"` |
@@ -329,7 +327,7 @@ Generate these - the compiler desugars them to Core:
 
 ## Operations: Type-Directed Dispatch
 
-**The killer feature for LLMs**: Write generic operation names, compiler infers types.
+**The killer feature for LLMs**: Write generic operation names, interpreter infers types.
 
 ### Arithmetic
 
@@ -343,7 +341,7 @@ Generate these - the compiler desugars them to Core:
 ```
 
 **You don't need to remember:** `add_int`, `add_float`, `add_decimal`, `add`  
-**Just write:** `(add x y)` and the compiler figures it out from `x`'s type.
+**Just write:** `(add x y)` and the interpreter figures it out from `x`'s type.
 
 ### Comparisons
 
@@ -412,10 +410,8 @@ Generate these - the compiler desugars them to Core:
 (read_line)               ; Read line from stdin -> string
 ```
 
-**How it works**: The compiler automatically dispatches to the correct print function based on the value's type:
+**How it works**: The interpreter automatically dispatches to the correct print function based on the value's type:
 - `int` → `print_int`
-- `int` → `print_int`  
-- `float` → `print_float`
 - `float` → `print_float`
 - `bool` → `io_print_bool`
 - `string` → `io_print_str`
@@ -838,11 +834,13 @@ AISL has a built-in test framework. Add tests to verify behavior:
 
 | Path | Purpose |
 |------|---------|
-| `compiler/c/src/compiler.c` | Core statement compilation |
-| `compiler/c/src/desugar.c` | Agent → Core transformation |
-| `compiler/c/src/parser.c` | Syntax parsing |
-| `compiler/c/include/bytecode.h` | Bytecode operations |
-| `tests/` | 81+ test files with examples |
+| `interpreter/interpreter.ml` | Core interpreter with all builtins |
+| `interpreter/parser.ml` | S-expression parser |
+| `interpreter/lexer.ml` | Tokenizer |
+| `interpreter/ast.ml` | AST node types |
+| `interpreter/types.ml` | Type kind definitions |
+| `interpreter/vm.ml` | Entry point |
+| `tests/` | 119 test files with examples |
 | `examples/` | Complete working programs |
 
 ### Quick Lookups
@@ -1088,10 +1086,10 @@ Use a descriptive name instead (e.g., 'json_data', 'json_value')
 
 **What used to happen (before fix):** The variable was parsed as a type instead of a name, causing it to store/print as "0" or garbage values instead of the actual content.
 
-**Example that now fails at compile time:**
+**Example that now fails at parse time:**
 ```lisp
 (fn test -> int
-  (set json string "{\"status\":\"ok\"}")  ; Compiler error!
+  (set json string "{\"status\":\"ok\"}")  ; Parse error!
   (print json)
   (ret 0))
 ```
@@ -1232,11 +1230,11 @@ Core IR constructs like `label`, `goto`, and `ifnot` are special syntax, not fun
 
 AISL is designed for predictable performance:
 
-- **Zero runtime dispatch**: Type dispatch happens at compile time
-- **No GC pauses**: Manual memory management (strings are ref-counted)
-- **Predictable jumps**: All control flow compiles to simple jumps
-- **Flat bytecode**: No complex stack frames, direct instruction execution
-- **Fast compilation**: Single-pass compilation with simple desugaring
+- **Type-directed dispatch**: Interpreter resolves operations based on argument types
+- **No GC pauses**: OCaml's garbage collector is generational and incremental
+- **Predictable control flow**: All structured constructs desugar to simple jumps
+- **Direct interpretation**: Tree-walking interpreter with no compilation step
+- **Fast startup**: Single-step execution — parse and run immediately
 
 ---
 
@@ -1278,7 +1276,7 @@ AISL is designed for predictable performance:
 
 1. **Two layers**: Agent (what you write) desugars to Core (what runs)
 2. **Explicit everything**: Types, control flow - no hidden behavior
-3. **Type dispatch**: Write `add`, compiler picks `add_int` or `add_float`
+3. **Type dispatch**: Write `add`, interpreter picks `add_int` or `add_float`
 4. **S-expressions**: Uniform syntax, easy to parse and generate
 5. **Structured control**: `while`, `loop`, `break`, `continue` desugar to jumps
 6. **No precedence**: All operations are function calls
@@ -1294,7 +1292,7 @@ AISL is designed for predictable performance:
 - **Repository**: [Link to be added]
 - **Documentation**: This directory (`*.md` files)
 - **Examples**: `examples/` directory (working programs)
-- **Tests**: `tests/` directory (85 test files)
+- **Tests**: `tests/` directory (119 test files)
 - **Issues**: [Link to be added]
 
 ---

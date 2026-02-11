@@ -1,11 +1,12 @@
 @(meta-spec)
 @(proj aisl ty:sys-lang principle:one-way-only)
-@(stat tests:126 stdlib:13-modules examples:17)
+@(stat tests:119 stdlib:14-modules examples:22)
+@(impl ocaml tree-walking-interpreter no-bytecode direct-execution)
 @(types
   (primitives int float bool string)
   (handles process socket file)
   (collections array map json)
-  (special regex))
+  (special regex ws_socket channel))
 @(stdlib
   (core arith cmp log bit cast)
   (string concat len split trim contains replace)
