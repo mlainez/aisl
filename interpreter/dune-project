@@ -1,0 +1,18 @@
+(lang dune 3.0)
+(name aisl)
+(version 1.0.0)
+
+(generate_opam_files true)
+
+(source (github anomalyco/aisl))
+(license MIT)
+(authors "AISL Contributors")
+(maintainers "marc@anomaly.co")
+
+(package
+ (name aisl)
+ (synopsis "AISL Compiler and VM in OCaml")
+ (description "An AI-optimized systems language compiler and virtual machine written in OCaml")
+ (depends
+  (ocaml (>= 4.14))
+  dune))
