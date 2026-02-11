@@ -1,0 +1,149 @@
+(module test_tcp_loopback
+
+  (fn test_tcp_send_receive -> int
+    (set port int 18701)
+    (set server socket (tcp_listen port))
+    (set client socket (tcp_connect "127.0.0.1" port))
+    (set accepted socket (tcp_accept server))
+    (set msg string "hello from client")
+    (tcp_send client msg)
+    (set received string (tcp_receive accepted 1024))
+    (tcp_close client)
+    (tcp_close accepted)
+    (tcp_close server)
+    (if (string_equals received msg)
+      (ret 1))
+    (ret 0))
+
+  (fn test_tcp_server_to_client -> int
+    (set port int 18702)
+    (set server socket (tcp_listen port))
+    (set client socket (tcp_connect "127.0.0.1" port))
+    (set accepted socket (tcp_accept server))
+    (set msg string "hello from server")
+    (tcp_send accepted msg)
+    (set received string (tcp_receive client 1024))
+    (tcp_close client)
+    (tcp_close accepted)
+    (tcp_close server)
+    (if (string_equals received msg)
+      (ret 1))
+    (ret 0))
+
+  (fn test_tcp_bidirectional -> int
+    (set port int 18703)
+    (set server socket (tcp_listen port))
+    (set client socket (tcp_connect "127.0.0.1" port))
+    (set accepted socket (tcp_accept server))
+    (set msg1 string "ping")
+    (tcp_send client msg1)
+    (set got1 string (tcp_receive accepted 1024))
+    (set msg2 string "pong")
+    (tcp_send accepted msg2)
+    (set got2 string (tcp_receive client 1024))
+    (tcp_close client)
+    (tcp_close accepted)
+    (tcp_close server)
+    (set ok1 bool (string_equals got1 msg1))
+    (set ok2 bool (string_equals got2 msg2))
+    (if ok1
+      (if ok2
+        (ret 1)))
+    (ret 0))
+
+  (fn test_tcp_large_message -> int
+    (set port int 18704)
+    (set server socket (tcp_listen port))
+    (set client socket (tcp_connect "127.0.0.1" port))
+    (set accepted socket (tcp_accept server))
+    (set msg string "ABCDEFGHIJ")
+    (set big_msg string msg)
+    (set i int 0)
+    (while (lt i 6)
+      (set big_msg string (string_concat big_msg big_msg))
+      (set i int (add i 1)))
+    (set expected_len int (string_length big_msg))
+    (tcp_send client big_msg)
+    (set received string "")
+    (set total_len int 0)
+    (while (lt total_len expected_len)
+      (set chunk string (tcp_receive accepted 4096))
+      (set chunk_len int (string_length chunk))
+      (if (eq chunk_len 0)
+        (set total_len int expected_len))
+      (if (gt chunk_len 0)
+        (set received string (string_concat received chunk))
+        (set total_len int (string_length received))))
+    (tcp_close client)
+    (tcp_close accepted)
+    (tcp_close server)
+    (set recv_len int (string_length received))
+    (if (eq recv_len expected_len)
+      (ret 1))
+    (ret 0))
+
+  (fn test_tcp_socket_select -> int
+    (set port int 18705)
+    (set server socket (tcp_listen port))
+    (set client socket (tcp_connect "127.0.0.1" port))
+    (set accepted socket (tcp_accept server))
+    (set msg string "select test")
+    (tcp_send client msg)
+    (sleep 20)
+    (set inputs array (array_new))
+    (array_push inputs accepted)
+    (set ready array (socket_select inputs))
+    (set ready_count int (array_length ready))
+    (tcp_close client)
+    (tcp_close accepted)
+    (tcp_close server)
+    (if (gt ready_count 0)
+      (ret 1))
+    (ret 0))
+
+  (fn test_tcp_close_detection -> int
+    (set port int 18706)
+    (set server socket (tcp_listen port))
+    (set client socket (tcp_connect "127.0.0.1" port))
+    (set accepted socket (tcp_accept server))
+    (tcp_close client)
+    (sleep 20)
+    (set data string (tcp_receive accepted 1024))
+    (set data_len int (string_length data))
+    (tcp_close accepted)
+    (tcp_close server)
+    (if (eq data_len 0)
+      (ret 1))
+    (ret 0))
+
+  (test-spec test_tcp_send_receive
+    (case "client sends message to server via loopback"
+      (input)
+      (expect 1)))
+
+  (test-spec test_tcp_server_to_client
+    (case "server sends message to client via loopback"
+      (input)
+      (expect 1)))
+
+  (test-spec test_tcp_bidirectional
+    (case "bidirectional ping-pong over TCP loopback"
+      (input)
+      (expect 1)))
+
+  (test-spec test_tcp_large_message
+    (case "sends and receives a large message (640 bytes)"
+      (input)
+      (expect 1)))
+
+  (test-spec test_tcp_socket_select
+    (case "socket_select detects readable socket"
+      (input)
+      (expect 1)))
+
+  (test-spec test_tcp_close_detection
+    (case "detects closed connection via empty receive"
+      (input)
+      (expect 1)))
+
+  (meta-note "Tests TCP loopback: send/receive, bidirectional, large messages, socket_select, close detection"))
