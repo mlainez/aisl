@@ -1,18 +1,18 @@
 (lang dune 3.0)
-(name aisl)
+(name sigil)
 (version 1.0.0)
 
 (generate_opam_files true)
 
-(source (github anomalyco/aisl))
+(source (github anomalyco/sigil))
 (license MIT)
-(authors "AISL Contributors")
+(authors "Sigil Contributors")
 (maintainers "marc@anomaly.co")
 
 (package
- (name aisl)
- (synopsis "AISL Compiler and VM in OCaml")
- (description "An AI-optimized systems language compiler and virtual machine written in OCaml")
+ (name sigil)
+ (synopsis "Sigil Interpreter and VM in OCaml")
+ (description "A symbolic programming language designed for AI code generation, with a tree-walking interpreter in OCaml")
  (depends
   (ocaml (>= 4.14))
   dune))
