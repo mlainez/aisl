@@ -41,11 +41,8 @@ stdlib/ (13 pure AISL implementations):
 - sys/: time, process, sleep
 - db/: sqlite
 
-modules/ (additional modules):
-- array_utils, unit_conversion, math, math_extended, math_simple, http, json_utils, network, filesystem, validation, text_utils
-
 Process:
-1. List stdlib/ AND modules/ directories to see available modules
+1. List stdlib/ directory to see available modules
 2. Check module manifest (.aisl.manifest) for function signatures
 3. Import module with: (import <module_name>)
 4. Use available functions

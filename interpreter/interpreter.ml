@@ -897,7 +897,7 @@ and eval_block env exprs =
 
   match func_name with
   (* Arithmetic - int *)
-   | "add" | "op_add_i64" ->
+   | "add" ->
        (match arg_vals with
         | [VInt a; VInt b] -> VInt (Int64.add a b)
         | [VFloat a; VFloat b] -> VFloat (a +. b)
@@ -905,7 +905,7 @@ and eval_block env exprs =
              VDecimal (bigdecimal_add a b)
          | _ -> raise (RuntimeError ("Invalid arguments to add")))
 
-   | "sub" | "op_sub_i64" ->
+   | "sub" ->
        (match arg_vals with
         | [VInt a; VInt b] -> VInt (Int64.sub a b)
         | [VFloat a; VFloat b] -> VFloat (a -. b)
@@ -913,7 +913,7 @@ and eval_block env exprs =
              VDecimal (bigdecimal_sub a b)
          | _ -> raise (RuntimeError "Invalid arguments to sub"))
 
-   | "mul" | "op_mul_i64" ->
+   | "mul" ->
        (match arg_vals with
         | [VInt a; VInt b] -> VInt (Int64.mul a b)
         | [VFloat a; VFloat b] -> VFloat (a *. b)
@@ -921,7 +921,7 @@ and eval_block env exprs =
              VDecimal (bigdecimal_mul a b)
          | _ -> raise (RuntimeError "Invalid arguments to mul"))
 
-   | "div" | "op_div_i64" ->
+   | "div" ->
        (match arg_vals with
         | [VInt a; VInt b] ->
             if b = 0L then raise (RuntimeError "Division by zero")
@@ -933,14 +933,14 @@ and eval_block env exprs =
              VDecimal (bigdecimal_div a b ~precision:20 ())
          | _ -> raise (RuntimeError "Invalid arguments to div"))
   
-  | "mod" | "op_mod_i64" ->
+  | "mod" ->
       (match arg_vals with
        | [VInt a; VInt b] ->
            if b = 0L then raise (RuntimeError "Division by zero")
            else VInt (Int64.rem a b)
        | _ -> raise (RuntimeError "Invalid arguments to mod"))
   
-  | "neg" | "op_neg_i64" ->
+  | "neg" ->
       (match arg_vals with
        | [VInt a] -> VInt (Int64.neg a)
        | [VFloat a] -> VFloat (a *. -1.0)
@@ -948,7 +948,7 @@ and eval_block env exprs =
             VDecimal (bigdecimal_neg a)
         | _ -> raise (RuntimeError "Invalid arguments to neg"))
 
-  | "abs" | "math_abs_i64" ->
+  | "abs" ->
       (match arg_vals with
        | [VInt a] -> VInt (if a < 0L then Int64.neg a else a)
        | [VFloat a] -> VFloat (abs_float a)
@@ -956,7 +956,7 @@ and eval_block env exprs =
             VDecimal (bigdecimal_abs a)
         | _ -> raise (RuntimeError "Invalid arguments to abs"))
 
-  | "min" | "math_min_i64" ->
+  | "min" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VInt (if a < b then a else b)
        | [VFloat a; VFloat b] -> VFloat (min a b)
@@ -964,7 +964,7 @@ and eval_block env exprs =
             if bigdecimal_compare a b <= 0 then VDecimal (decimal_normalize a) else VDecimal (decimal_normalize b)
         | _ -> raise (RuntimeError "Invalid arguments to min"))
 
-  | "max" | "math_max_i64" ->
+  | "max" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VInt (if a > b then a else b)
        | [VFloat a; VFloat b] -> VFloat (max a b)
@@ -972,18 +972,18 @@ and eval_block env exprs =
             if bigdecimal_compare a b >= 0 then VDecimal (decimal_normalize a) else VDecimal (decimal_normalize b)
         | _ -> raise (RuntimeError "Invalid arguments to max"))
 
-  | "sqrt" | "math_sqrt_f64" ->
+  | "sqrt" ->
       (match arg_vals with
        | [VFloat a] -> VFloat (sqrt a)
        | _ -> raise (RuntimeError "Invalid arguments to sqrt"))
 
-  | "pow" | "math_pow_f64" ->
+  | "pow" ->
       (match arg_vals with
        | [VFloat a; VFloat b] -> VFloat (a ** b)
        | _ -> raise (RuntimeError "Invalid arguments to pow"))
 
   (* Comparisons *)
-   | "eq" | "op_eq_i64" ->
+   | "eq" ->
        (match arg_vals with
         | [VInt a; VInt b] -> VBool (a = b)
         | [VFloat a; VFloat b] -> VBool (a = b)
@@ -996,7 +996,7 @@ and eval_block env exprs =
          | [a; b] -> raise (RuntimeError ("eq requires arguments of the same type, got " ^ string_of_value_type a ^ " and " ^ string_of_value_type b))
          | _ -> raise (RuntimeError "Invalid arguments to eq"))
   
-   | "ne" | "op_ne_i64" ->
+   | "ne" ->
        (match arg_vals with
         | [VInt a; VInt b] -> VBool (a <> b)
         | [VFloat a; VFloat b] -> VBool (a <> b)
@@ -1009,28 +1009,28 @@ and eval_block env exprs =
          | [a; b] -> raise (RuntimeError ("ne requires arguments of the same type, got " ^ string_of_value_type a ^ " and " ^ string_of_value_type b))
          | _ -> raise (RuntimeError "Invalid arguments to ne"))
   
-  | "lt" | "op_lt_i64" ->
+  | "lt" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VBool (a < b)
        | [VFloat a; VFloat b] -> VBool (a < b)
        | [VDecimal a; VDecimal b] -> VBool (bigdecimal_compare a b < 0)
        | _ -> raise (RuntimeError "Invalid arguments to lt"))
   
-  | "gt" | "op_gt_i64" ->
+  | "gt" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VBool (a > b)
        | [VFloat a; VFloat b] -> VBool (a > b)
        | [VDecimal a; VDecimal b] -> VBool (bigdecimal_compare a b > 0)
        | _ -> raise (RuntimeError "Invalid arguments to gt"))
   
-  | "le" | "op_le_i64" ->
+  | "le" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VBool (a <= b)
        | [VFloat a; VFloat b] -> VBool (a <= b)
        | [VDecimal a; VDecimal b] -> VBool (bigdecimal_compare a b <= 0)
        | _ -> raise (RuntimeError "Invalid arguments to le"))
   
-  | "ge" | "op_ge_i64" ->
+  | "ge" ->
       (match arg_vals with
        | [VInt a; VInt b] -> VBool (a >= b)
        | [VFloat a; VFloat b] -> VBool (a >= b)
@@ -1038,28 +1038,28 @@ and eval_block env exprs =
        | _ -> raise (RuntimeError "Invalid arguments to ge"))
 
   (* Logical operations *)
-  | "not" | "op_not" ->
+  | "not" ->
       (match arg_vals with
        | [VBool a] -> VBool (not a)
        | _ -> raise (RuntimeError "Invalid arguments to not"))
 
   (* Type conversions *)
-  | "cast_i64_f64" | "cast_int_float" ->
+  | "cast_int_float" ->
       (match arg_vals with
        | [VInt a] -> VFloat (Int64.to_float a)
        | _ -> raise (RuntimeError "Invalid arguments to cast_int_float"))
 
-   | "cast_f64_i64" | "cast_float_int" ->
+   | "cast_float_int" ->
        (match arg_vals with
         | [VFloat a] -> VInt (Int64.of_float a)
         | _ -> raise (RuntimeError "Invalid arguments to cast_float_int"))
 
-   | "cast_i64_decimal" | "cast_int_decimal" ->
+   | "cast_int_decimal" ->
        (match arg_vals with
         | [VInt a] -> VDecimal (Int64.to_string a)
         | _ -> raise (RuntimeError "Invalid arguments to cast_int_decimal"))
 
-    | "cast_decimal_i64" | "cast_decimal_int" ->
+    | "cast_decimal_int" ->
         (match arg_vals with
          | [VDecimal s] ->
              (* Handle fractional decimals by truncating toward zero *)
@@ -1245,10 +1245,10 @@ and eval_block env exprs =
         | _ -> raise (RuntimeError "Invalid arguments to string_join"))
 
   (* Array operations *)
-  | "array_new" | "ArrayNew" ->
+  | "array_new" ->
       VArray (ref [||])
   
-  | "array_push" | "ArrayPush" ->
+  | "array_push" ->
       (match arg_vals with
        | [VArray arr; v] ->
            let new_arr = Array.append !arr (Array.make 1 v) in
@@ -1256,7 +1256,7 @@ and eval_block env exprs =
            VArray arr
        | _ -> raise (RuntimeError "Invalid arguments to array_push"))
 
-  | "array_get" | "ArrayGet" ->
+  | "array_get" ->
       (match arg_vals with
        | [VArray arr; VInt idx] ->
            let i = Int64.to_int idx in
@@ -1266,7 +1266,7 @@ and eval_block env exprs =
              raise (RuntimeError ("Array index out of bounds: " ^ Int64.to_string idx))
        | _ -> raise (RuntimeError "Invalid arguments to array_get"))
 
-  | "array_set" | "ArraySet" ->
+  | "array_set" ->
       (match arg_vals with
        | [VArray arr; VInt idx; v] ->
            let i = Int64.to_int idx in
@@ -1277,7 +1277,7 @@ and eval_block env exprs =
            VArray arr
        | _ -> raise (RuntimeError "Invalid arguments to array_set"))
 
-   | "array_length" | "ArrayLen" ->
+   | "array_length" ->
        (match arg_vals with
         | [VArray arr] -> VInt (Int64.of_int (Array.length !arr))
         | _ -> raise (RuntimeError "Invalid arguments to array_length"))
@@ -1334,36 +1334,36 @@ and eval_block env exprs =
         | _ -> raise (RuntimeError "Invalid arguments to array_index_of"))
 
    (* Map operations *)
-  | "map_new" | "MapNew" ->
+  | "map_new" ->
       make_vmap ()
   
-  | "map_set" | "MapSet" ->
+  | "map_set" ->
       (match arg_vals with
        | [VMap (m, keys); VString k; v] ->
            vmap_set m keys k v;
            VMap (m, keys)
        | _ -> raise (RuntimeError "Invalid arguments to map_set"))
 
-   | "map_get" | "MapGet" ->
+   | "map_get" ->
        (match arg_vals with
         | [VMap (m, _); VString k] ->
             (try Hashtbl.find m k
              with Not_found -> raise (RuntimeError ("Key not found in map: " ^ k)))
         | _ -> raise (RuntimeError "Invalid arguments to map_get"))
 
-  | "map_has" | "MapHas" ->
+  | "map_has" ->
       (match arg_vals with
        | [VMap (m, _); VString k] -> VBool (Hashtbl.mem m k)
        | _ -> raise (RuntimeError "Invalid arguments to map_has"))
 
-  | "map_delete" | "MapDelete" ->
+  | "map_delete" ->
       (match arg_vals with
        | [VMap (m, keys); VString k] ->
            vmap_delete m keys k;
            VMap (m, keys)
        | _ -> raise (RuntimeError "Invalid arguments to map_delete"))
 
-   | "map_keys" | "MapKeys" ->
+   | "map_keys" ->
        (match arg_vals with
         | [VMap (_, keys)] ->
             VArray (ref (Array.of_list (List.map (fun k -> VString k) !keys)))
@@ -1442,11 +1442,6 @@ and eval_block env exprs =
         | _ -> raise (RuntimeError "Invalid arguments to file_delete"))
 
    (* I/O *)
-    | "print_int" | "io_print_i64" ->
-        (match arg_vals with
-         | [VInt n] -> print_int (Int64.to_int n); VUnit
-         | _ -> raise (RuntimeError "Invalid arguments to print_int: expected int"))
-
    | "print" ->
        (match arg_vals with
         | [v] -> print_string (string_of_value v); VUnit
@@ -1457,17 +1452,7 @@ and eval_block env exprs =
        | [v] -> print_endline (string_of_value v); VUnit
        | _ -> raise (RuntimeError "println takes 1 argument"))
 
-   | "io_print_str" ->
-       (match arg_vals with
-        | [VString s] -> print_string s; VUnit
-        | _ -> raise (RuntimeError "Invalid arguments to io_print_str"))
-
-  | "io_print_bool" ->
-      (match arg_vals with
-       | [VBool b] -> print_endline (string_of_bool b); VUnit
-       | _ -> raise (RuntimeError "Invalid arguments to io_print_bool"))
-
-  | "read_line" | "stdin_read" ->
+  | "read_line" ->
       VString (read_line ())
 
    | "stdin_read_all" ->
@@ -1991,12 +1976,12 @@ and eval_block env exprs =
         | _ -> VString "unknown")
 
    (* Map operations - additional *)
-   | "map_length" | "MapLength" ->
+   | "map_length" ->
        (match arg_vals with
         | [VMap (m, _)] -> VInt (Int64.of_int (Hashtbl.length m))
         | _ -> raise (RuntimeError "Invalid arguments to map_length"))
 
-   | "map_values" | "MapValues" ->
+   | "map_values" ->
        (match arg_vals with
         | [VMap (m, keys)] ->
             let values = List.filter_map (fun k -> Hashtbl.find_opt m k) !keys in
@@ -2004,12 +1989,12 @@ and eval_block env exprs =
         | _ -> raise (RuntimeError "Invalid arguments to map_values"))
 
    (* Additional type conversions *)
-   | "cast_float_decimal" | "cast_f64_decimal" ->
+   | "cast_float_decimal" ->
        (match arg_vals with
         | [VFloat f] -> VDecimal (format_decimal f)
         | _ -> raise (RuntimeError "Invalid arguments to cast_float_decimal"))
 
-   | "cast_decimal_float" | "cast_decimal_f64" ->
+   | "cast_decimal_float" ->
        (match arg_vals with
         | [VDecimal s] -> VFloat (float_of_string s)
         | _ -> raise (RuntimeError "Invalid arguments to cast_decimal_float"))
@@ -2019,19 +2004,6 @@ and eval_block env exprs =
        (match arg_vals with
         | [VInt n] -> VString (String.make 1 (Char.chr (Int64.to_int n)))
         | _ -> raise (RuntimeError "Invalid arguments to char_from_code"))
-
-   (* Additional math *)
-   | "math_sqrt" ->
-       (match arg_vals with
-        | [VFloat a] -> VFloat (sqrt a)
-        | [VInt a] -> VFloat (sqrt (Int64.to_float a))
-        | _ -> raise (RuntimeError "Invalid arguments to math_sqrt"))
-
-   | "math_pow" ->
-       (match arg_vals with
-        | [VFloat a; VFloat b] -> VFloat (a ** b)
-        | [VInt a; VInt b] -> VFloat (Int64.to_float a ** Int64.to_float b)
-        | _ -> raise (RuntimeError "Invalid arguments to math_pow"))
 
    (* Array additional ops *)
    | "array_pop" ->

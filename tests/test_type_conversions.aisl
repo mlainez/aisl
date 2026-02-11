@@ -1,8 +1,8 @@
 (module test
-  (fn i64_to_f64 x int -> float
-    (ret (cast_i64_f64 x)))
+  (fn int_to_float x int -> float
+    (ret (cast_int_float x)))
   
-  (test-spec i64_to_f64
+  (test-spec int_to_float
     (case "convert 42 to float"
       (input 42)
       (expect 42.0))
@@ -13,10 +13,10 @@
       (input -10)
       (expect -10.0)))
   
-  (fn f64_to_i64 x float -> int
-    (ret (cast_f64_i64 x)))
+  (fn float_to_int x float -> int
+    (ret (cast_float_int x)))
   
-  (test-spec f64_to_i64
+  (test-spec float_to_int
     (case "truncate 99.99 to int"
       (input 99.99)
       (expect 99))
@@ -30,4 +30,4 @@
       (input 9.99)
       (expect 9)))
   
-  (meta-note "Tests type conversion between int and float types (i64/f64)"))
+  (meta-note "Tests type conversion between int and float types"))

@@ -1,6 +1,6 @@
 (module test_math_simple
   (fn test_sqrt -> int
-    (ret (cast_f64_i64 (sqrt 16.0))))
+    (ret (cast_float_int (sqrt 16.0))))
   
   (test-spec test_sqrt
     (case "computes square root of 16.0"

@@ -49,12 +49,12 @@
     (if is_negative
       (set abs_f float (sub 0.0 f)))
     
-    (set int_part int (cast_f64_i64 abs_f))
+    (set int_part int (cast_float_int abs_f))
     (set int_str string (string_from_int int_part))
     
-    (set float_part float (sub abs_f (cast_i64_f64 int_part)))
+    (set float_part float (sub abs_f (cast_int_float int_part)))
     (set scaled float (mul float_part 1000.0))
-    (set frac_part int (cast_f64_i64 scaled))
+    (set frac_part int (cast_float_int scaled))
     
     (set result string int_str)
     (set result string (string_concat result "."))
