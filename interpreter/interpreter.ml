@@ -977,10 +977,25 @@ and eval_block env exprs =
        | [VFloat a] -> VFloat (sqrt a)
        | _ -> raise (RuntimeError "Invalid arguments to sqrt"))
 
-  | "pow" ->
+   | "pow" ->
       (match arg_vals with
        | [VFloat a; VFloat b] -> VFloat (a ** b)
        | _ -> raise (RuntimeError "Invalid arguments to pow"))
+
+  | "floor" ->
+      (match arg_vals with
+       | [VFloat f] -> VInt (Int64.of_float (floor f))
+       | _ -> raise (RuntimeError "Invalid arguments to floor: expects (float) -> int"))
+
+  | "ceil" ->
+      (match arg_vals with
+       | [VFloat f] -> VInt (Int64.of_float (ceil f))
+       | _ -> raise (RuntimeError "Invalid arguments to ceil: expects (float) -> int"))
+
+  | "round" ->
+      (match arg_vals with
+       | [VFloat f] -> VInt (Int64.of_float (Float.round f))
+       | _ -> raise (RuntimeError "Invalid arguments to round: expects (float) -> int"))
 
   (* Comparisons *)
    | "eq" ->
@@ -1242,7 +1257,80 @@ and eval_block env exprs =
               | _ -> raise (RuntimeError "string_join: array contains non-stringifiable value")
             ) in
             VString (String.concat delim parts)
-        | _ -> raise (RuntimeError "Invalid arguments to string_join"))
+         | _ -> raise (RuntimeError "Invalid arguments to string_join"))
+
+   | "string_starts_with" ->
+       (match arg_vals with
+        | [VString s; VString prefix] ->
+            let plen = String.length prefix in
+            VBool (String.length s >= plen && String.sub s 0 plen = prefix)
+        | _ -> raise (RuntimeError "Invalid arguments to string_starts_with: expects (string, string) -> bool"))
+
+   | "string_ends_with" ->
+       (match arg_vals with
+        | [VString s; VString suffix] ->
+            let slen = String.length s in
+            let xlen = String.length suffix in
+            VBool (slen >= xlen && String.sub s (slen - xlen) xlen = suffix)
+        | _ -> raise (RuntimeError "Invalid arguments to string_ends_with: expects (string, string) -> bool"))
+
+   | "string_contains" ->
+       (match arg_vals with
+        | [VString haystack; VString needle] ->
+            let hlen = String.length haystack in
+            let nlen = String.length needle in
+            if nlen = 0 then VBool true
+            else if nlen > hlen then VBool false
+            else begin
+              let found = ref false in
+              let i = ref 0 in
+              while !i <= hlen - nlen && not !found do
+                if String.sub haystack !i nlen = needle then
+                  found := true
+                else
+                  i := !i + 1
+              done;
+              VBool !found
+            end
+        | _ -> raise (RuntimeError "Invalid arguments to string_contains: expects (string, string) -> bool"))
+
+   | "string_trim" ->
+       (match arg_vals with
+        | [VString s] ->
+            let len = String.length s in
+            let i = ref 0 in
+            while !i < len && (s.[!i] = ' ' || s.[!i] = '\t' || s.[!i] = '\n' || s.[!i] = '\r') do
+              i := !i + 1
+            done;
+            let j = ref (len - 1) in
+            while !j >= !i && (s.[!j] = ' ' || s.[!j] = '\t' || s.[!j] = '\n' || s.[!j] = '\r') do
+              j := !j - 1
+            done;
+            if !i > !j then VString ""
+            else VString (String.sub s !i (!j - !i + 1))
+        | _ -> raise (RuntimeError "Invalid arguments to string_trim: expects (string) -> string"))
+
+   | "string_replace" ->
+       (match arg_vals with
+        | [VString s; VString old_s; VString new_s] ->
+            let olen = String.length old_s in
+            if olen = 0 then VString s
+            else begin
+              let buf = Buffer.create (String.length s) in
+              let slen = String.length s in
+              let i = ref 0 in
+              while !i < slen do
+                if !i <= slen - olen && String.sub s !i olen = old_s then begin
+                  Buffer.add_string buf new_s;
+                  i := !i + olen
+                end else begin
+                  Buffer.add_char buf s.[!i];
+                  i := !i + 1
+                end
+              done;
+              VString (Buffer.contents buf)
+            end
+        | _ -> raise (RuntimeError "Invalid arguments to string_replace: expects (string, string, string) -> string"))
 
   (* Array operations *)
   | "array_new" ->
@@ -1439,7 +1527,19 @@ and eval_block env exprs =
               VBool true
             with Unix.Unix_error _ ->
               VBool false
-        | _ -> raise (RuntimeError "Invalid arguments to file_delete"))
+         | _ -> raise (RuntimeError "Invalid arguments to file_delete"))
+
+   (* Command-line arguments *)
+   | "argv" ->
+       let args = Array.to_list Sys.argv in
+       let script_args = match args with
+         | _ :: _ :: rest -> rest  (* skip executable and filename *)
+         | _ -> [] in
+       VArray (ref (Array.of_list (List.map (fun s -> VString s) script_args)))
+
+   | "argv_count" ->
+       let count = max 0 (Array.length Sys.argv - 2) in
+       VInt (Int64.of_int count)
 
    (* I/O *)
    | "print" ->

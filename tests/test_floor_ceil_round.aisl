@@ -1,0 +1,88 @@
+(module test_floor_ceil_round
+
+  (fn floor_positive val float -> int
+    (ret (floor val)))
+
+  (fn floor_negative val float -> int
+    (ret (floor val)))
+
+  (fn ceil_positive val float -> int
+    (ret (ceil val)))
+
+  (fn ceil_negative val float -> int
+    (ret (ceil val)))
+
+  (fn round_down val float -> int
+    (ret (round val)))
+
+  (fn round_up val float -> int
+    (ret (round val)))
+
+  (fn round_half val float -> int
+    (ret (round val)))
+
+  (fn round_negative val float -> int
+    (ret (round val)))
+
+  (test-spec floor_positive
+    (case "floors 3.7 to 3"
+      (input 3.7)
+      (expect 3))
+    (case "floors 3.2 to 3"
+      (input 3.2)
+      (expect 3))
+    (case "floors 0.9 to 0"
+      (input 0.9)
+      (expect 0)))
+
+  (test-spec floor_negative
+    (case "floors -1.2 to -2"
+      (input -1.2)
+      (expect -2))
+    (case "floors -1.7 to -2"
+      (input -1.7)
+      (expect -2)))
+
+  (test-spec ceil_positive
+    (case "ceils 3.2 to 4"
+      (input 3.2)
+      (expect 4))
+    (case "ceils 3.7 to 4"
+      (input 3.7)
+      (expect 4))
+    (case "ceils 0.1 to 1"
+      (input 0.1)
+      (expect 1)))
+
+  (test-spec ceil_negative
+    (case "ceils -1.7 to -1"
+      (input -1.7)
+      (expect -1))
+    (case "ceils -1.2 to -1"
+      (input -1.2)
+      (expect -1)))
+
+  (test-spec round_down
+    (case "rounds 3.2 down to 3"
+      (input 3.2)
+      (expect 3)))
+
+  (test-spec round_up
+    (case "rounds 3.7 up to 4"
+      (input 3.7)
+      (expect 4)))
+
+  (test-spec round_half
+    (case "rounds 2.5 to 3"
+      (input 2.5)
+      (expect 3)))
+
+  (test-spec round_negative
+    (case "rounds -1.5 to -2"
+      (input -1.5)
+      (expect -2))
+    (case "rounds -1.3 to -1"
+      (input -1.3)
+      (expect -1)))
+
+  (meta-note "Tests floor/ceil/round builtins with positive, negative, and half values"))

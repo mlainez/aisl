@@ -1,0 +1,88 @@
+(module test_string_builtins
+
+  (fn test_starts_with text string prefix string -> bool
+    (ret (string_starts_with text prefix)))
+
+  (fn test_ends_with text string suffix string -> bool
+    (ret (string_ends_with text suffix)))
+
+  (fn test_contains haystack string needle string -> bool
+    (ret (string_contains haystack needle)))
+
+  (fn test_trim text string -> string
+    (ret (string_trim text)))
+
+  (fn test_replace text string old_str string new_str string -> string
+    (ret (string_replace text old_str new_str)))
+
+  (test-spec test_starts_with
+    (case "matches prefix"
+      (input "hello world" "hello")
+      (expect true))
+    (case "no match"
+      (input "hello world" "world")
+      (expect false))
+    (case "empty prefix matches"
+      (input "hello" "")
+      (expect true))
+    (case "longer prefix fails"
+      (input "hi" "hello")
+      (expect false)))
+
+  (test-spec test_ends_with
+    (case "matches suffix"
+      (input "hello world" "world")
+      (expect true))
+    (case "no match"
+      (input "hello world" "hello")
+      (expect false))
+    (case "empty suffix matches"
+      (input "hello" "")
+      (expect true))
+    (case "longer suffix fails"
+      (input "hi" "world")
+      (expect false)))
+
+  (test-spec test_contains
+    (case "finds substring"
+      (input "hello world" "lo wo")
+      (expect true))
+    (case "not found"
+      (input "hello world" "xyz")
+      (expect false))
+    (case "empty needle matches"
+      (input "hello" "")
+      (expect true))
+    (case "exact match"
+      (input "hello" "hello")
+      (expect true)))
+
+  (test-spec test_trim
+    (case "trims spaces"
+      (input "  hello  ")
+      (expect "hello"))
+    (case "trims tabs and newlines"
+      (input "\t\nhello\r\n")
+      (expect "hello"))
+    (case "no whitespace unchanged"
+      (input "hello")
+      (expect "hello"))
+    (case "all whitespace returns empty"
+      (input "   ")
+      (expect "")))
+
+  (test-spec test_replace
+    (case "replaces all occurrences"
+      (input "hello world hello" "hello" "hi")
+      (expect "hi world hi"))
+    (case "no match unchanged"
+      (input "hello world" "xyz" "abc")
+      (expect "hello world"))
+    (case "empty old string unchanged"
+      (input "hello" "" "x")
+      (expect "hello"))
+    (case "replace with empty"
+      (input "hello world" " world" "")
+      (expect "hello")))
+
+  (meta-note "Tests string_starts_with, string_ends_with, string_contains, string_trim, string_replace builtins"))
