@@ -5,10 +5,10 @@
   (test-spec eq_f32
     (case "equal float"
       (input 3.14 3.14)
-      (expect 1))
+      (expect true))
     (case "not equal float"
       (input 3.14 2.71)
-      (expect 0)))
+      (expect false)))
   
   (fn lt_f32 a float b float -> bool
     (ret (lt a b)))
@@ -16,10 +16,10 @@
   (test-spec lt_f32
     (case "less than float"
       (input 2.0 5.0)
-      (expect 1))
+      (expect true))
     (case "not less than float"
       (input 5.0 2.0)
-      (expect 0)))
+      (expect false)))
   
   (fn gt_f32 a float b float -> bool
     (ret (gt a b)))
@@ -27,10 +27,10 @@
   (test-spec gt_f32
     (case "greater than float"
       (input 10.5 3.2)
-      (expect 1))
+      (expect true))
     (case "not greater than float"
       (input 3.2 10.5)
-      (expect 0)))
+      (expect false)))
   
   (fn eq_f64 a float b float -> bool
     (ret (eq a b)))
@@ -38,10 +38,10 @@
   (test-spec eq_f64
     (case "equal float pi"
       (input 3.141592653589793 3.141592653589793)
-      (expect 1))
+      (expect true))
     (case "not equal float"
       (input 2.718281828459045 3.141592653589793)
-      (expect 0)))
+      (expect false)))
   
   (fn lt_f64 a float b float -> bool
     (ret (lt a b)))
@@ -49,10 +49,10 @@
   (test-spec lt_f64
     (case "less than float"
       (input 1.5 2.5)
-      (expect 1))
+      (expect true))
     (case "not less than float"
       (input 2.5 1.5)
-      (expect 0)))
+      (expect false)))
   
   (fn gt_f64 a float b float -> bool
     (ret (gt a b)))
@@ -60,9 +60,9 @@
   (test-spec gt_f64
     (case "greater than float"
       (input 100.0 50.0)
-      (expect 1))
+      (expect true))
     (case "not greater than float"
       (input 50.0 100.0)
-      (expect 0)))
+      (expect false)))
   
   (meta-note "Tests float and float comparison operators"))

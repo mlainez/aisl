@@ -30,10 +30,10 @@
   (test-spec check_contains
     (case "contains world"
       (input "hello world" "world")
-      (expect 1))
+      (expect true))
     (case "does not contain foo"
       (input "hello world" "foo")
-      (expect 0)))
+      (expect false)))
   
   (fn do_replace original string from_str string to_str string -> string
     (ret (replace original from_str to_str)))

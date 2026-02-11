@@ -6,24 +6,24 @@
   (test-spec check_contains
     (case "contains substring at end"
       (input "hello world" "world")
-      (expect 1))
+      (expect true))
     (case "does not contain substring"
       (input "hello world" "foo")
-      (expect 0))
+      (expect false))
     (case "contains substring at start"
       (input "hello world" "hello")
-      (expect 1))
+      (expect true))
     (case "contains empty string"
       (input "test" "")
-      (expect 1))
+      (expect true))
     (case "exact match"
       (input "exact" "exact")
-      (expect 1))
+      (expect true))
     (case "case sensitive no match"
       (input "Hello" "hello")
-      (expect 0))
+      (expect false))
     (case "substring in middle"
       (input "hello world" "o w")
-      (expect 1)))
+      (expect true)))
   
   (meta-note "Tests contains for various substring search cases"))

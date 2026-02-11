@@ -28,10 +28,10 @@
   (test-spec parse_and_get_bool
     (case "get true"
       (input "{\"active\":true}")
-      (expect 1))
+      (expect true))
     (case "get false"
       (input "{\"active\":false}")
-      (expect 0)))
+      (expect false)))
   
   (fn create_object_and_stringify key1 string val1 string key2 string val2 int -> string
     (ret (json_stringify (json_set (json_set (json_new_object) key1 val1) key2 val2))))

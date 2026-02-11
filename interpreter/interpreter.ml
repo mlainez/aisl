@@ -381,14 +381,6 @@ let rec string_of_value = function
 let values_equal v1 v2 =
   match v1, v2 with
   | VDecimal s1, VDecimal s2 -> float_of_string s1 = float_of_string s2
-  | VDecimal s1, VString s2 -> s1 = s2
-  | VString s1, VDecimal s2 -> s1 = s2
-  | VBool true, VInt n -> n = 1L
-  | VBool false, VInt n -> n = 0L
-  | VInt n, VBool true -> n = 1L
-  | VInt n, VBool false -> n = 0L
-  | VFloat a, VInt b -> a = Int64.to_float b
-  | VInt a, VFloat b -> Int64.to_float a = b
   | _ -> v1 = v2
 
 (* Evaluate expression *)
@@ -587,7 +579,9 @@ and eval_block env exprs =
         | [VInt a; VInt b] ->
             if b = 0L then raise (RuntimeError "Division by zero")
             else VInt (Int64.div a b)
-        | [VFloat a; VFloat b] -> VFloat (a /. b)
+         | [VFloat a; VFloat b] ->
+             if b = 0.0 then raise (RuntimeError "Division by zero")
+             else VFloat (a /. b)
         | [VDecimal a; VDecimal b] ->
             let b_val = float_of_string b in
             if b_val = 0.0 then raise (RuntimeError "Division by zero")
@@ -657,10 +651,11 @@ and eval_block env exprs =
         | [VFloat a; VFloat b] -> VBool (a = b)
         | [VBool a; VBool b] -> VBool (a = b)
         | [VString a; VString b] -> VBool (a = b)
-        | [VDecimal a; VDecimal b] ->
-            (* Normalize decimals through float for proper comparison *)
-            VBool (float_of_string a = float_of_string b)
-        | _ -> VBool false)
+         | [VDecimal a; VDecimal b] ->
+             (* Normalize decimals through float for proper comparison *)
+             VBool (float_of_string a = float_of_string b)
+         | [a; b] -> raise (RuntimeError ("eq requires arguments of the same type, got " ^ string_of_value_type a ^ " and " ^ string_of_value_type b))
+         | _ -> raise (RuntimeError "Invalid arguments to eq"))
   
    | "ne" | "op_ne_i64" ->
        (match arg_vals with
@@ -668,9 +663,10 @@ and eval_block env exprs =
         | [VFloat a; VFloat b] -> VBool (a <> b)
         | [VBool a; VBool b] -> VBool (a <> b)
         | [VString a; VString b] -> VBool (a <> b)
-        | [VDecimal a; VDecimal b] ->
-            VBool (float_of_string a <> float_of_string b)
-        | _ -> VBool true)
+         | [VDecimal a; VDecimal b] ->
+             VBool (float_of_string a <> float_of_string b)
+         | [a; b] -> raise (RuntimeError ("ne requires arguments of the same type, got " ^ string_of_value_type a ^ " and " ^ string_of_value_type b))
+         | _ -> raise (RuntimeError "Invalid arguments to ne"))
   
   | "lt" | "op_lt_i64" ->
       (match arg_vals with
@@ -722,16 +718,15 @@ and eval_block env exprs =
         | [VInt a] -> VDecimal (Int64.to_string a)
         | _ -> raise (RuntimeError "Invalid arguments to cast_int_decimal"))
 
-   | "cast_decimal_i64" | "cast_decimal_int" ->
-       (match arg_vals with
-        | [VDecimal s] ->
-            (* Handle fractional decimals by truncating toward zero *)
-            (try VInt (Int64.of_string s)
-             with Failure _ ->
-               try VInt (Int64.of_float (float_of_string s))
-               with Failure _ -> raise (RuntimeError ("Cannot convert decimal to int: " ^ s)))
-        | [VFloat f] -> VInt (Int64.of_float f)
-        | _ -> raise (RuntimeError "Invalid arguments to cast_decimal_int"))
+    | "cast_decimal_i64" | "cast_decimal_int" ->
+        (match arg_vals with
+         | [VDecimal s] ->
+             (* Handle fractional decimals by truncating toward zero *)
+             (try VInt (Int64.of_string s)
+              with Failure _ ->
+                try VInt (Int64.of_float (float_of_string s))
+                with Failure _ -> raise (RuntimeError ("Cannot convert decimal to int: " ^ s)))
+         | _ -> raise (RuntimeError "Invalid arguments to cast_decimal_int: expected decimal"))
 
    | "string_from_int" ->
       (match arg_vals with
@@ -763,13 +758,10 @@ and eval_block env exprs =
        | _ -> raise (RuntimeError "Invalid arguments to string_from_bool"))
 
   (* String operations *)
-  | "string_length" ->
-      (match arg_vals with
-       | [VString s] -> VInt (Int64.of_int (String.length s))
-       | [VArray arr] -> VInt (Int64.of_int (Array.length !arr))
-       | [VMap (m, _)] -> VInt (Int64.of_int (Hashtbl.length m))
-       | [v] -> VInt (Int64.of_int (String.length (string_of_value v)))
-       | _ -> raise (RuntimeError "Invalid arguments to string_length"))
+   | "string_length" ->
+       (match arg_vals with
+        | [VString s] -> VInt (Int64.of_int (String.length s))
+        | _ -> raise (RuntimeError "Invalid arguments to string_length: expected string"))
 
   | "string_concat" ->
       (match arg_vals with
@@ -795,15 +787,15 @@ and eval_block env exprs =
              VString ""
        | _ -> raise (RuntimeError "Invalid arguments to string_slice"))
 
-   | "string_get" ->
-      (match arg_vals with
-       | [VString s; VInt idx] ->
-           let i = Int64.to_int idx in
-           if i >= 0 && i < String.length s then
-             VInt (Int64.of_int (Char.code s.[i]))
-           else
-             VInt 0L
-       | _ -> raise (RuntimeError "Invalid arguments to string_get"))
+    | "string_get" ->
+       (match arg_vals with
+        | [VString s; VInt idx] ->
+            let i = Int64.to_int idx in
+            if i >= 0 && i < String.length s then
+              VInt (Int64.of_int (Char.code s.[i]))
+            else
+              raise (RuntimeError ("String index out of bounds: " ^ Int64.to_string idx))
+        | _ -> raise (RuntimeError "Invalid arguments to string_get"))
 
    | "string_format" ->
        (match arg_vals with
@@ -897,12 +889,12 @@ and eval_block env exprs =
            VMap (m, keys)
        | _ -> raise (RuntimeError "Invalid arguments to map_set"))
 
-  | "map_get" | "MapGet" ->
-      (match arg_vals with
-       | [VMap (m, _); VString k] ->
-           (try Hashtbl.find m k
-            with Not_found -> VUnit)
-       | _ -> raise (RuntimeError "Invalid arguments to map_get"))
+   | "map_get" | "MapGet" ->
+       (match arg_vals with
+        | [VMap (m, _); VString k] ->
+            (try Hashtbl.find m k
+             with Not_found -> raise (RuntimeError ("Key not found in map: " ^ k)))
+        | _ -> raise (RuntimeError "Invalid arguments to map_get"))
 
   | "map_has" | "MapHas" ->
       (match arg_vals with
@@ -976,11 +968,10 @@ and eval_block env exprs =
         | _ -> raise (RuntimeError "Invalid arguments to file_delete"))
 
    (* I/O *)
-   | "print_int" | "io_print_i64" ->
-       (match arg_vals with
-        | [VInt n] -> print_int (Int64.to_int n); VUnit
-        | [VFloat f] -> print_float f; VUnit
-        | _ -> raise (RuntimeError "Invalid arguments to print_int"))
+    | "print_int" | "io_print_i64" ->
+        (match arg_vals with
+         | [VInt n] -> print_int (Int64.to_int n); VUnit
+         | _ -> raise (RuntimeError "Invalid arguments to print_int: expected int"))
 
    | "print" ->
        (match arg_vals with
@@ -1464,28 +1455,30 @@ and eval_block env exprs =
             VString (stringify v)
         | _ -> raise (RuntimeError "Invalid arguments to json_stringify"))
 
-   | "json_get" ->
-       (match arg_vals with
-        | [VMap (m, _); VString k] ->
-            (try Hashtbl.find m k
-             with Not_found -> VUnit)
-        | [VArray arr; VInt idx] ->
-            let i = Int64.to_int idx in
-            if i >= 0 && i < Array.length !arr then !arr.(i)
-            else VUnit
-        | _ -> raise (RuntimeError "Invalid arguments to json_get"))
+    | "json_get" ->
+        (match arg_vals with
+         | [VMap (m, _); VString k] ->
+             (try Hashtbl.find m k
+              with Not_found -> raise (RuntimeError ("Key not found in JSON object: " ^ k)))
+         | [VArray arr; VInt idx] ->
+             let i = Int64.to_int idx in
+             if i >= 0 && i < Array.length !arr then !arr.(i)
+             else raise (RuntimeError ("JSON array index out of bounds: " ^ Int64.to_string idx))
+         | _ -> raise (RuntimeError "Invalid arguments to json_get"))
 
-   | "json_set" ->
-       (match arg_vals with
-        | [VMap (m, keys); VString k; v] ->
-            vmap_set m keys k v;
-            VMap (m, keys)
-        | [VArray arr; VInt idx; v] ->
-            let i = Int64.to_int idx in
-            if i >= 0 && i < Array.length !arr then
-              (!arr).(i) <- v;
-            VArray arr
-        | _ -> raise (RuntimeError "Invalid arguments to json_set"))
+    | "json_set" ->
+        (match arg_vals with
+         | [VMap (m, keys); VString k; v] ->
+             vmap_set m keys k v;
+             VMap (m, keys)
+         | [VArray arr; VInt idx; v] ->
+             let i = Int64.to_int idx in
+             if i >= 0 && i < Array.length !arr then begin
+               (!arr).(i) <- v;
+               VArray arr
+             end else
+               raise (RuntimeError ("JSON array index out of bounds: " ^ Int64.to_string idx))
+         | _ -> raise (RuntimeError "Invalid arguments to json_set"))
 
    | "json_has" ->
        (match arg_vals with

@@ -5,10 +5,10 @@
   (test-spec eq_i64
     (case "equal large numbers"
       (input 100 100)
-      (expect 1))
+      (expect true))
     (case "not equal large numbers"
       (input 1000000000000 2000000000000)
-      (expect 0)))
+      (expect false)))
   
   (fn lt_i64 a int b int -> bool
     (ret (lt a b)))
@@ -16,10 +16,10 @@
   (test-spec lt_i64
     (case "less than"
       (input 50 100)
-      (expect 1))
+      (expect true))
     (case "not less than"
       (input 100 50)
-      (expect 0)))
+      (expect false)))
   
   (fn gt_i64 a int b int -> bool
     (ret (gt a b)))
@@ -27,9 +27,9 @@
   (test-spec gt_i64
     (case "greater than"
       (input 100 50)
-      (expect 1))
+      (expect true))
     (case "not greater than"
       (input 50 100)
-      (expect 0)))
+      (expect false)))
   
   (meta-note "Tests int comparison operations for large integers"))

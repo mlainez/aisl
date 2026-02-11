@@ -5,7 +5,7 @@
   (test-spec eq_i64
     (case "equal large numbers"
       (input 1000000000000 1000000000000)
-      (expect 1)))
+      (expect true)))
   
   (fn ne_i64 a int b int -> bool
     (ret (ne a b)))
@@ -13,7 +13,7 @@
   (test-spec ne_i64
     (case "not equal large numbers"
       (input 1000000000000 2000000000000)
-      (expect 1)))
+      (expect true)))
   
   (fn lt_i64 a int b int -> bool
     (ret (lt a b)))
@@ -21,7 +21,7 @@
   (test-spec lt_i64
     (case "less than large numbers"
       (input 1000000000000 2000000000000)
-      (expect 1)))
+      (expect true)))
   
   (fn gt_i64 a int b int -> bool
     (ret (gt a b)))
@@ -29,7 +29,7 @@
   (test-spec gt_i64
     (case "greater than large numbers"
       (input 2000000000000 1000000000000)
-      (expect 1)))
+      (expect true)))
   
   (fn le_i64 a int b int -> bool
     (ret (le a b)))
@@ -37,7 +37,7 @@
   (test-spec le_i64
     (case "less or equal int"
       (input 1000000000000 1000000000000)
-      (expect 1)))
+      (expect true)))
   
   (fn ge_i64 a int b int -> bool
     (ret (ge a b)))
@@ -45,6 +45,6 @@
   (test-spec ge_i64
     (case "greater or equal int"
       (input 2000000000000 1000000000000)
-      (expect 1)))
+      (expect true)))
   
   (meta-note "Tests all comparison operators for int, float, and float types"))

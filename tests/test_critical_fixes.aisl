@@ -69,10 +69,10 @@
 
   (test-spec test_cast_decimal_int
     (case "whole number decimal"
-      (input 42.0)
+      (input (cast_float_decimal 42.0))
       (expect 42))
     (case "fractional decimal truncates"
-      (input 3.14)
+      (input (cast_float_decimal 3.14))
       (expect 3)))
 
   (test-spec test_min_decimal

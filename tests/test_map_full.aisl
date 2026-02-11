@@ -13,13 +13,13 @@
   (test-spec map_has_key
     (case "has key a"
       (input "a")
-      (expect 1))
+      (expect true))
     (case "has key b"
       (input "b")
-      (expect 1))
+      (expect true))
     (case "does not have key x"
       (input "x")
-      (expect 0)))
+      (expect false)))
   
   (fn map_delete_then_length -> int
     (ret (map_length (map_delete (map_set (map_set (map_set (map_new) "a" 100) "b" 200) "c" 300) "b"))))
@@ -35,6 +35,6 @@
   (test-spec map_delete_then_has
     (case "deleted key b not present"
       (input "b")
-      (expect 0)))
+      (expect false)))
   
   (meta-note "Tests map operations: new, set, get, length, has, delete"))

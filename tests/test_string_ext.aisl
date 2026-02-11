@@ -6,10 +6,10 @@
   (test-spec check_starts_with
     (case "starts with Hello"
       (input "Hello World" "Hello")
-      (expect 1))
+      (expect true))
     (case "does not start with World"
       (input "Hello World" "World")
-      (expect 0)))
+      (expect false)))
   
   (fn check_ends_with msg string suffix string -> bool
     (ret (ends_with msg suffix)))
@@ -17,10 +17,10 @@
   (test-spec check_ends_with
     (case "ends with World"
       (input "Hello World" "World")
-      (expect 1))
+      (expect true))
     (case "does not end with Hello"
       (input "Hello World" "Hello")
-      (expect 0)))
+      (expect false)))
   
   (fn do_to_upper msg string -> string
     (ret (to_upper msg)))

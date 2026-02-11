@@ -5,10 +5,10 @@
   (test-spec eq_i32
     (case "equal values"
       (input 5 5)
-      (expect 1))
+      (expect true))
     (case "different values"
       (input 5 10)
-      (expect 0)))
+      (expect false)))
   
   (fn ne_i32 a int b int -> bool
     (ret (ne a b)))
@@ -16,10 +16,10 @@
   (test-spec ne_i32
     (case "different values"
       (input 5 10)
-      (expect 1))
+      (expect true))
     (case "equal values"
       (input 5 5)
-      (expect 0)))
+      (expect false)))
   
   (fn lt_i32 a int b int -> bool
     (ret (lt a b)))
@@ -27,13 +27,13 @@
   (test-spec lt_i32
     (case "less than"
       (input 3 10)
-      (expect 1))
+      (expect true))
     (case "greater than"
       (input 10 3)
-      (expect 0))
+      (expect false))
     (case "equal values"
       (input 5 5)
-      (expect 0)))
+      (expect false)))
   
   (fn gt_i32 a int b int -> bool
     (ret (gt a b)))
@@ -41,13 +41,13 @@
   (test-spec gt_i32
     (case "greater than"
       (input 10 3)
-      (expect 1))
+      (expect true))
     (case "less than"
       (input 3 10)
-      (expect 0))
+      (expect false))
     (case "equal values"
       (input 5 5)
-      (expect 0)))
+      (expect false)))
   
   (fn le_i32 a int b int -> bool
     (ret (le a b)))
@@ -55,13 +55,13 @@
   (test-spec le_i32
     (case "equal values"
       (input 5 5)
-      (expect 1))
+      (expect true))
     (case "less than"
       (input 3 10)
-      (expect 1))
+      (expect true))
     (case "greater than"
       (input 10 3)
-      (expect 0)))
+      (expect false)))
   
   (fn ge_i32 a int b int -> bool
     (ret (ge a b)))
@@ -69,12 +69,12 @@
   (test-spec ge_i32
     (case "equal values"
       (input 5 5)
-      (expect 1))
+      (expect true))
     (case "greater than"
       (input 10 3)
-      (expect 1))
+      (expect true))
     (case "less than"
       (input 3 10)
-      (expect 0)))
+      (expect false)))
   
   (meta-note "Tests all int comparison operators: eq, ne, lt, gt, le, ge"))

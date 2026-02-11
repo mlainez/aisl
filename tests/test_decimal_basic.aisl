@@ -8,6 +8,6 @@
   (test-spec decimal_add
     (case "adds two positive decimals"
       (input 10 5)
-      (expect "15")))
+      (expect (cast_int_decimal 15))))
   
   (meta-note "Tests basic decimal addition"))

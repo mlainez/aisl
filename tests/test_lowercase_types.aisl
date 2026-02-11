@@ -44,7 +44,7 @@
   
   (test-spec return_bool
     (case "return true"
-      (input 1)
-      (expect 1)))
+      (input true)
+      (expect true)))
   
   (meta-note "Tests all lowercase type names: int int float float string bool array map"))
