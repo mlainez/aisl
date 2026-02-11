@@ -46,6 +46,7 @@ statement ::= (set <var> <type> <expr>)
             | (while <bool_expr> <statement>*)
             | (loop <statement>*)
             | (if <bool_expr> <statement>* [(else <statement>*)])
+            | (cond (<bool_expr> <statement>*)*)
             | (for-each <var> <type> <collection_expr> <statement>*)
             | (try <statement>* (catch <var> <type> <statement>*))
             | (break)
@@ -57,6 +58,8 @@ expr ::= <literal>
        | (call <function> <arg>*)
        | (and <expr> <expr>)     ; Short-circuit: e2 not evaluated if e1 is false
        | (or <expr> <expr>)      ; Short-circuit: e2 not evaluated if e1 is true
+       | [<expr>*]               ; Array literal
+       | {<expr> <expr>}*        ; Map literal (key-value pairs)
 
 literal ::= <number> | <string> | true | false
 ```
@@ -134,6 +137,37 @@ Executes then-branch if condition is true, else-branch otherwise.
         (set result string "negative"))))
   (ret result))
 ```
+
+### Cond (Flat Multi-Branch Conditional)
+
+**Cond**: `(cond (<condition> <statements>...)...)`
+
+Evaluates conditions in order, executes the body of the first matching branch. Returns unit if no condition matches. Use `true` as the last condition for a default/else branch.
+
+```scheme
+(fn classify_number n int -> string
+  (set result string "unknown")
+  (cond
+    ((gt n 0) (set result string "positive"))
+    ((lt n 0) (set result string "negative"))
+    (true (set result string "zero")))
+  (ret result))
+
+(fn grade_score score int -> string
+  (set result string "F")
+  (cond
+    ((ge score 90) (set result string "A"))
+    ((ge score 80) (set result string "B"))
+    ((ge score 70) (set result string "C"))
+    ((ge score 60) (set result string "D"))
+    (true (set result string "F")))
+  (ret result))
+```
+
+**When to use `cond` vs nested `if-else`:**
+- Use `cond` when you have 3+ mutually exclusive branches — flatter, more readable
+- Use `if-else` for simple binary conditions
+- `cond` evaluates conditions top-to-bottom, executes first match only
 
 ### Structured Loops
 
@@ -218,6 +252,31 @@ Iterates over array elements or map keys.
 ```
 
 For-each supports `break` and `continue`. Element type is validated at runtime against the declared type.
+
+### Array and Map Literals
+
+**Array literal**: `[<elements>...]`
+
+Creates an array inline from evaluated expressions.
+
+```scheme
+(set nums array [1 2 3 4 5])
+(set names array ["Alice" "Bob" "Charlie"])
+(set empty array [])
+(set mixed array [1 2 3])  ; All elements must be same type at runtime
+```
+
+**Map literal**: `{<key> <value> ...}`
+
+Creates a map inline from key-value pairs. Keys must evaluate to strings.
+
+```scheme
+(set config map {"host" "localhost" "port" 8080})
+(set user map {"name" "Alice" "age" 30})
+(set empty_map map {})
+```
+
+Array and map literals produce the same runtime values as `array_new`/`map_new` + push/set operations. Map keys maintain insertion order.
 
 ### Label-based Control Flow (Core Level)
 
@@ -381,7 +440,7 @@ Many high-level operations are now implemented in **pure AISL stdlib modules** i
     (ret 0)))
 ```
 
-**Note:** String operations (split, trim, replace, etc.), JSON operations, and Base64 functions are implemented in stdlib modules. Import the appropriate module to use them.
+**Note:** String operations like split, to_upper, and to_lower are implemented in stdlib modules (import string_utils). However, string_contains, string_trim, string_replace, string_starts_with, string_ends_with, and string_split are also available as builtins without any import. JSON operations and Base64 functions are implemented in stdlib modules. Import the appropriate module to use them.
 
 See `stdlib/README.md` for complete documentation of all stdlib modules.
 
@@ -412,6 +471,9 @@ The interpreter infers types automatically. Write operation names without type s
 (call max a b)     ; Maximum
 (call sqrt value)  ; Square root (float, float only)
 (call pow base exp); Power (float, float only)
+(call floor value) ; Round toward -infinity (float -> int)
+(call ceil value)  ; Round toward +infinity (float -> int)
+(call round value) ; Round to nearest (float -> int)
 ```
 
 The interpreter automatically selects the correct operation based on variable types:
@@ -436,9 +498,15 @@ The interpreter automatically selects the correct operation based on variable ty
 (call string_slice text start len)     ; Extract substring (start index, length) -> string
 (call string_format template args...)  ; Format with {} placeholders -> string
 (call string_find haystack needle)     ; Find index of needle (-1 if not found) -> int
+(call string_contains haystack needle) ; Check contains -> bool
+(call string_trim text)                ; Remove whitespace from both ends -> string
+(call string_replace text old new)     ; Replace ALL occurrences -> string
+(call string_starts_with text prefix)  ; Check prefix -> bool
+(call string_ends_with text suffix)    ; Check suffix -> bool
+(call string_split text delimiter)     ; Split into array -> array
 ```
 
-**Advanced string operations** (require `(import string_utils)`):
+**Advanced string operations** (available via `(import string_utils)` — note: trim, contains, replace, starts_with, ends_with are also builtins):
 
 ```scheme
 (call split text delimiter)            ; Split -> array
@@ -511,12 +579,9 @@ The interpreter automatically selects the correct operation based on variable ty
 ### I/O Operations
 
 ```scheme
-(call print text)              ; Print string
-(call print number)        ; Print int
-(call print number)        ; Print int
-(call print number)        ; Print float
-(call print number)        ; Print float
-(call print_bool value)        ; Print bool
+(call print value)             ; Print any type (polymorphic dispatch)
+(call println value)           ; Print with newline
+(call read_line)               ; Read line from stdin -> string
 ```
 
 ### File Operations
@@ -528,6 +593,13 @@ The interpreter automatically selects the correct operation based on variable ty
 (call file_exists path)        ; Check exists -> bool
 (call file_delete path)        ; Delete file
 (call file_size path)          ; Get size -> int
+```
+
+### System Operations
+
+```scheme
+(call argv)                    ; Get command-line arguments (after filename) -> array of strings
+(call argv_count)              ; Get count of extra arguments -> int
 ```
 
 ### Error Handling
@@ -681,16 +753,14 @@ For predictable errors, guard checks are simpler and more explicit:
 ### Type Conversions
 
 ```scheme
-(call cast_int_int value)        ; int -> int
-(call cast_int_int value)        ; int -> int (truncate)
-(call cast_int_float value)        ; int -> float
-(call cast_int_float value)        ; int -> float
-(call cast_float_int value)        ; float -> int (truncate)
-(call cast_float_int value)        ; float -> int (truncate)
+(call cast_int_float value)      ; int -> float
+(call cast_float_int value)      ; float -> int (truncate)
+(call cast_int_decimal value)    ; int -> decimal
+(call cast_decimal_int value)    ; decimal -> int
+(call cast_float_decimal value)  ; float -> decimal
+(call cast_decimal_float value)  ; decimal -> float
 (call string_from_int value)     ; int -> string
-(call string_from_int value)     ; int -> string
-(call string_from_float value)     ; float -> string
-(call string_from_float value)     ; float -> string
+(call string_from_float value)   ; float -> string
 (call string_from_bool value)    ; bool -> string
 ```
 

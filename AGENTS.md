@@ -11,23 +11,21 @@
 **This document is human-readable prose with examples.**  
 **For token-optimized LLM consumption, use these instead:**
 
-- **`.aisl.grammar`** - Complete language reference in 45 lines (~400 tokens) - **CONSULT FIRST**
-- **`.aisl.meta`** - Project context in compressed s-expr format (80% fewer tokens)
+- **`.aisl.grammar`** - Complete language reference in 196 lines (~1600 tokens) - **CONSULT FIRST**
 - **`.aisl.analysis`** - Deep architectural analysis + runtime discoveries
 
 **Token efficiency:**
 - This file: ~700 lines = ~8,000 tokens
-- `.aisl.grammar`: ~45 lines = ~400 tokens
-- **20x more efficient for context loading**
+- `.aisl.grammar`: ~196 lines = ~1,600 tokens
+- **5x more efficient for context loading**
 
 **Consultation order for AI agents:**
 1. **FIRST**: `.aisl.grammar` - syntax, operations, critical notes
-2. **SECOND**: `.aisl.meta` - project context
-3. **THIRD**: `.aisl.analysis` - design decisions, discovered issues
-4. **LAST**: This file (AGENTS.md) - only if you need detailed examples
+2. **SECOND**: `.aisl.analysis` - design decisions, discovered issues
+3. **LAST**: This file (AGENTS.md) - only if you need detailed examples
 
 **When to use each:**
-- **Generating AISL code**: Load `.aisl.grammar` + `.aisl.meta` ONLY
+- **Generating AISL code**: Load `.aisl.grammar` ONLY
 - **Fixing bugs/issues**: Check `.aisl.analysis` for known issues
 - **Learning AISL deeply**: Read this file (AGENTS.md)
 - **Understanding design**: Read `.aisl.analysis`
@@ -298,9 +296,22 @@ Generate these - the interpreter handles them directly:
   (catch err string
     (print "Caught: ")
     (print err)))
+
+; Cond - flat multi-branch conditional
+(cond
+  ((gt x 0) (set result string "positive"))
+  ((lt x 0) (set result string "negative"))
+  (true (set result string "zero")))
+
+; Array literals
+(set nums array [1 2 3 4 5])
+(set names array ["Alice" "Bob"])
+
+; Map literals
+(set config map {"host" "localhost" "port" 8080})
 ```
 
-**Note**: `if` is the primary conditional construct. It supports an optional `(else ...)` block. `and`/`or` are short-circuit special forms (not function calls) - the second expression is not evaluated if the result is determined by the first. `try/catch` catches RuntimeError exceptions and binds the error message as a string to the catch variable.
+**Note**: `if` is the primary conditional construct. It supports an optional `(else ...)` block. `cond` is for flat multi-branch conditionals (3+ branches) — evaluates conditions in order, executes the first match. Use `true` as the last condition for a default branch. `and`/`or` are short-circuit special forms (not function calls) - the second expression is not evaluated if the result is determined by the first. `try/catch` catches RuntimeError exceptions and binds the error message as a string to the catch variable. Array literals `[...]` and map literals `{...}` create arrays/maps inline.
 
 ---
 
@@ -385,6 +396,9 @@ Generate these - the interpreter handles them directly:
 (max a b)     ; Maximum
 (sqrt x)      ; Square root (float only)
 (pow x y)     ; Power (float only)
+(floor x)     ; Round toward -infinity (float -> int)
+(ceil x)      ; Round toward +infinity (float -> int)
+(round x)     ; Round to nearest (float -> int)
 ```
 
 ### String Operations
@@ -397,9 +411,11 @@ Generate these - the interpreter handles them directly:
 (string_slice text start len)     ; Extract substring (start, LENGTH) -> string
 (string_split text delimiter)     ; Split -> array
 (string_trim text)                ; Remove whitespace -> string
-(string_replace text old new)      ; Replace substring -> string
+(string_replace text old new)      ; Replace ALL occurrences -> string
 (string_format template args...)  ; Format with {} placeholders -> string
 (string_find haystack needle)     ; Find index of needle (-1 if not found) -> int
+(string_starts_with text prefix)  ; Check prefix -> bool
+(string_ends_with text suffix)    ; Check suffix -> bool
 ```
 
 **CRITICAL**: `string_slice` takes `(text, start, LENGTH)` NOT `(text, start, end)`.
@@ -467,13 +483,9 @@ Generate these - the interpreter handles them directly:
 
 **CRITICAL: Many operations that were previously built-in opcodes are now implemented in stdlib modules.**
 
-AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written in AISL."** As of 2026-02-07, the following operations require importing stdlib modules:
+AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written in AISL."** However, commonly-used string operations are available as both builtins and stdlib implementations.
 
 ### Operations That Require Stdlib Import
-
-**CRITICAL: Many operations require importing stdlib modules.**
-
-AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written in AISL."** The following operations require importing stdlib modules:
 
 | Operation | Stdlib Import Required | Function Name |
 |-----------|------------------------|---------------|
@@ -551,7 +563,7 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 ### When to Use Stdlib vs Built-in
 
 **Use stdlib imports for:**
-- ✅ String manipulation (split, trim, replace)
+- ✅ String manipulation (split, to_upper, to_lower — note: trim, contains, replace, starts_with, ends_with are now also builtins)
 - ✅ Type conversion (string_from_int, string_from_float, bool_to_int)
 - ✅ Unit conversion (kilometers_to_miles, celsius_to_fahrenheit)
 - ✅ JSON operations (parse, stringify)
@@ -565,20 +577,21 @@ AISL follows the philosophy: **"If it CAN be written in AISL, it MUST be written
 **Use built-in operations for:**
 - ✅ Arithmetic (add, sub, mul, div, mod)
 - ✅ Comparisons (eq, ne, lt, gt, le, ge)
-- ✅ Basic math (abs, min, max, sqrt, pow)
+- ✅ Basic math (abs, min, max, sqrt, pow, floor, ceil, round)
 - ✅ Type conversions (cast_int_float, cast_int_decimal, cast_decimal_int, cast_float_decimal, cast_decimal_float, string_from_int, etc.)
-- ✅ Basic string ops (string_length, string_concat, string_slice, string_format, string_find)
+- ✅ String ops (string_length, string_concat, string_slice, string_format, string_find, string_contains, string_trim, string_replace, string_starts_with, string_ends_with, string_split)
 - ✅ I/O (print, print_ln, read_line)
 - ✅ File operations (file_read, file_write, file_exists)
-- ✅ Arrays (array_new, array_push, array_get, array_set, array_length)
-- ✅ Maps (map_new, map_set, map_get, map_has, map_delete)
+- ✅ Arrays (array_new, array_push, array_get, array_set, array_length) + array literals `[1 2 3]`
+- ✅ Maps (map_new, map_set, map_get, map_has, map_delete) + map literals `{"key" "value"}`
 - ✅ TCP/networking (tcp_listen, tcp_accept, tcp_connect, tcp_send, tcp_receive)
+- ✅ System (argv, argv_count)
 
 ### Common Stdlib Patterns
 
 ### Important Notes for LLMs
 
-**BEFORE IMPLEMENTING: Check stdlib/ AND modules/ for available modules**
+**BEFORE IMPLEMENTING: Check stdlib/ for available modules**
 
 stdlib/ (pure AISL implementations):
 - `string_utils` - trim, split, contains, replace
@@ -593,26 +606,15 @@ stdlib/ (pure AISL implementations):
 - `process` - spawn, wait
 - `sqlite` - open, exec
 
-modules/ (additional modules):
-- `array_utils` - array_sum, array_find
-- `unit_conversion` - celsius_to_fahrenheit, kilometers_to_miles
-- `math` - abs, min, max
-- `network` - parse_url, build_url
-- `filesystem` - read_file_safe, write_file_safe
-- `validation` - is_positive, is_negative
-- `string_utils` - string operations
-- `http` - HTTP client
-- `json_utils` - JSON parsing
-
 **Process:**
-1. List `stdlib/` AND `modules/` directories
+1. List `stdlib/` directory to see available modules
 2. Check module manifest (.aisl.manifest) for function signatures
 3. Import: `(import module_name)`
 4. Use available functions
 
-**NEVER implement something that exists in stdlib/ or modules/**
+**NEVER implement something that exists in stdlib/**
 
-1. **Always check if an operation needs an import** - If you get a "function not found" error, check if it's a stdlib or modules function.
+1. **Always check if an operation needs an import** - If you get a "function not found" error, check if it's a stdlib function.
 
 2. **Import modules at the top** - Put all `(import ...)` statements right after `(module ...)`.
 
@@ -624,7 +626,7 @@ modules/ (additional modules):
 
 4. **Function names match module names** - After importing `json_utils`, use `json_parse`, `json_stringify`, etc. (not shortened names).
 
-5. **Documentation location:** See `stdlib/README.md` for complete documentation of all 12 modules.
+5. **Documentation location:** See `stdlib/README.md` for complete documentation of all 13 modules.
 
 ---
 
@@ -824,7 +826,7 @@ AISL has a built-in test framework. Add tests to verify behavior:
 | `interpreter/ast.ml` | AST node types |
 | `interpreter/types.ml` | Type kind definitions |
 | `interpreter/vm.ml` | Entry point |
-| `tests/` | 126 test files with examples |
+| `tests/` | 134 test files with examples |
 | `examples/` | Complete working programs |
 
 ### Quick Lookups
@@ -1269,7 +1271,7 @@ AISL is designed for predictable performance:
 - **Repository**: [Link to be added]
 - **Documentation**: This directory (`*.md` files)
 - **Examples**: `examples/` directory (working programs)
-- **Tests**: `tests/` directory (126 test files)
+- **Tests**: `tests/` directory (134 test files)
 - **Issues**: [Link to be added]
 
 ---
