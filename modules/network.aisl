@@ -1,4 +1,5 @@
 (module network
+  (import string_utils)
   (fn parse_url url string -> array
     (set has_http bool (contains url "http://"))
     (set has_https bool (contains url "https://"))
@@ -39,7 +40,7 @@
     (set result string "http://")
     (set result string (string_concat result host))
     (set result string (string_concat result ":"))
-    (set port_str string (from_i64 port))
+    (set port_str string (string_from_int port))
     (set result string (string_concat result port_str))
     (set norm_path string (normalize_path path))
     (set result string (string_concat result norm_path))

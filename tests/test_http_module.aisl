@@ -1,10 +1,10 @@
 (module test_http_module
   (import http)
   
-  (fn get_status_text status int -> string
+  (fn check_status_text status int -> string
     (ret (get_status_text status)))
   
-  (test-spec get_status_text
+  (test-spec check_status_text
     (case "returns 200 OK for status 200"
       (input 200)
       (expect "200 OK"))

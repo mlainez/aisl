@@ -16,18 +16,18 @@
       (input "one-two-three" "-")
       (expect "two")))
   
-  (fn trim dirty string -> string
+  (fn do_trim dirty string -> string
     (ret (trim dirty)))
   
-  (test-spec trim
+  (test-spec do_trim
     (case "trim spaces"
       (input "  hello  ")
       (expect "hello")))
   
-  (fn contains haystack string needle string -> bool
+  (fn check_contains haystack string needle string -> bool
     (ret (contains haystack needle)))
   
-  (test-spec contains
+  (test-spec check_contains
     (case "contains world"
       (input "hello world" "world")
       (expect 1))
@@ -35,10 +35,10 @@
       (input "hello world" "foo")
       (expect 0)))
   
-  (fn replace original string from string to string -> string
-    (ret (replace original from to)))
+  (fn do_replace original string from_str string to_str string -> string
+    (ret (replace original from_str to_str)))
   
-  (test-spec replace
+  (test-spec do_replace
     (case "replace foo with X"
       (input "foo bar foo" "foo" "X")
       (expect "X bar X"))

@@ -45,7 +45,7 @@
     (ret result))
   
   (fn word_count text string -> int
-    (set words array (split text " "))
+    (set words array (string_split text " "))
     (set count int (array_length words))
     (ret count))
   
@@ -54,7 +54,7 @@
     (set result string "")
     (set i int (sub len 1))
     (while (ge i 0)
-      (set c string (string_slice text i (add i 1)))
+      (set c string (string_slice text i 1))
       (set result string (string_concat result c))
       (set i int (sub i 1)))
     (ret result))
@@ -80,6 +80,6 @@
     (set len_ok bool (ge text_len suffix_len))
     (if len_ok
       (set start int (sub text_len suffix_len))
-      (set sub string (string_slice text start text_len))
+      (set sub string (string_slice text start suffix_len))
       (set result bool (string_equals sub suffix)))
     (ret result)))

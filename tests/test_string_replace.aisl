@@ -1,9 +1,9 @@
 (module test_replace
   (import string_utils)
-  (fn replace text string old string new string -> string
-    (ret (replace text old new)))
+  (fn do_replace text string old_str string new_str string -> string
+    (ret (replace text old_str new_str)))
   
-  (test-spec replace
+  (test-spec do_replace
     (case "replace world with AISL"
       (input "hello world" "world" "AISL")
       (expect "hello AISL"))

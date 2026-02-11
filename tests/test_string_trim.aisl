@@ -1,9 +1,9 @@
 (module test_trim
   (import string_utils)
-  (fn trim input string -> string
-    (ret (trim input)))
+  (fn do_trim text string -> string
+    (ret (trim text)))
   
-  (test-spec trim
+  (test-spec do_trim
     (case "trim both sides"
       (input "   hello world   ")
       (expect "hello world"))

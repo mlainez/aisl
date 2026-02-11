@@ -17,14 +17,14 @@
     (ret exit_code))
   
   (fn exec db process sql string -> bool
-    (set sql_with_newline string (string_concat sql "\n"))
-    (set written bool (process_write db sql_with_newline))
+    (set sql_with_semi string (string_concat sql ";\n"))
+    (set written bool (process_write db sql_with_semi))
     (process_read db)
     (ret written))
   
   (fn query db process sql string -> array
-    (set sql_with_newline string (string_concat sql "\n"))
-    (process_write db sql_with_newline)
+    (set sql_with_semi string (string_concat sql ";\n"))
+    (process_write db sql_with_semi)
     (set output string (process_read db))
     (set output_len int (string_length output))
     

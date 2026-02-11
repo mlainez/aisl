@@ -72,7 +72,8 @@
         (break))
       (set end int (sub end 1)))
     
-    (ret (string_slice text start end)))
+    (set trim_len int (sub end start))
+    (ret (string_slice text start trim_len)))
   
   (fn contains haystack string needle string -> bool
     (set haystack_len int (string_length haystack))
@@ -122,7 +123,7 @@
     (if too_long
       (ret false))
     (set start int (sub text_len suffix_len))
-    (set end_part string (string_slice text start text_len))
+    (set end_part string (string_slice text start suffix_len))
     (ret (string_equals end_part suffix)))
   
   (fn to_upper text string -> string
@@ -140,7 +141,7 @@
           (set is_lower bool true)))
       (if is_lower
         (set ch int (sub ch 32)))
-      (set ch_str string (string_from_i64 ch))
+      (set ch_str string (char_from_code ch))
       (set result string (string_concat result ch_str))
       (set i int (add i 1)))
     
@@ -161,7 +162,7 @@
           (set is_upper bool true)))
       (if is_upper
         (set ch int (add ch 32)))
-      (set ch_str string (string_from_i64 ch))
+      (set ch_str string (char_from_code ch))
       (set result string (string_concat result ch_str))
       (set i int (add i 1)))
     
@@ -173,8 +174,7 @@
     (set i int (sub len 1))
     
     (while (ge i 0)
-      (set end int (add i 1))
-      (set ch string (string_slice text i end))
+      (set ch string (string_slice text i 1))
       (set result string (string_concat result ch))
       (set i int (sub i 1)))
     
